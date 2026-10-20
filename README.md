@@ -13,14 +13,14 @@ Bản online: https://pixel-forest-run.gladloom9.chatgpt.site/
 
 ## Chạy trên máy
 
-Mở `dist/index.html` bằng trình duyệt, hoặc chạy từ thư mục repository:
+Mở `index.html` bằng trình duyệt, hoặc chạy từ thư mục repository:
 
 ```sh
-python3 -m http.server 8000 --directory dist
+python3 -m http.server 8000
 ```
 
 Truy cập http://localhost:8000.
 
 ## Mã nguồn
 
-`dist/index.html` chứa toàn bộ giao diện và logic game.
+`index.html` chứa toàn bộ giao diện và logic game.
