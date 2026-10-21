@@ -176,6 +176,23 @@ function djPosition(){
 function drawFloatingDJ(){
  const pos=djPosition(),x=pos.x,top=pos.y,beat=Math.sin(djAge*7);
  g.save();g.translate(x,top);
+ // Layered golden aura follows the DJ and freezes with the performance clock.
+ const pulse=1+Math.sin(djAge*4)*.06;
+ const aura=g.createRadialGradient(0,32,8,0,32,78*pulse);
+ aura.addColorStop(0,'#fff7c866');aura.addColorStop(.4,'#ffe58e44');aura.addColorStop(.75,'#ffc94f22');aura.addColorStop(1,'#ffc94f00');
+ g.fillStyle=aura;g.fillRect(-85,-53,170,170);
+ for(let ring=0;ring<2;ring++){
+   g.strokeStyle=ring?'#ffe49a70':'#fff2b8a0';g.lineWidth=ring?1:1.5;
+   g.beginPath();g.ellipse(0,32,(43+ring*12)*pulse,(55+ring*9)*pulse,0,0,Math.PI*2);g.stroke();
+ }
+ for(let i=0;i<18;i++){
+   const a=i*Math.PI/9+djAge*(i%2?.55:-.4);
+   const px=Math.cos(a)*(49+i%3*5)*pulse,py=32+Math.sin(a)*(59+i%2*5)*pulse;
+   const shine=.5+.5*Math.sin(djAge*5+i*2);
+   g.globalAlpha=.4+shine*.6;detail(px,py,2,2,'#fff6ce');
+   if(i%3===0){detail(px-2,py+.5,6,1,'#ffdd80');detail(px+.5,py-2,1,6,'#ffdd80')}
+ }
+ g.globalAlpha=1;
  // Soft golden stage light follows the descending performer.
  const glow=g.createRadialGradient(0,39,8,0,39,80);
  glow.addColorStop(0,'#fff0a638');glow.addColorStop(1,'#ffe09000');
