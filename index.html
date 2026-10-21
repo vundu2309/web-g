@@ -45,7 +45,7 @@ footer p{font-size:10px;color:#adc2b5;line-height:1.6}kbd{border-radius:5px;bord
 @media(max-width:700px){.hud{left:12px;right:12px;top:12px;gap:5px}.hud span{padding:9px 10px;border-radius:9px;font-size:10px;letter-spacing:0}#score{font-size:12px}#state{font-size:9px}.buff,.shield-status{left:12px;padding:8px 11px;font-size:10px}.buff{top:64px}.shield-status{top:121px}footer{left:10px;right:10px;bottom:max(12px,env(safe-area-inset-bottom))}.controls{gap:4px;justify-content:space-between;border-radius:14px}.controls button{padding:10px 8px;font-size:10px;min-height:44px}#jump{min-width:73px}.card{padding:24px}.card h2{font-size:28px}}
 @media(max-height:450px){.hud{top:10px}.hud span{padding:8px 12px}.buff{top:57px}.shield-status{top:112px}footer{bottom:10px}.controls{padding:5px}.controls button{padding:9px 12px}.card{padding:16px 26px}.card:before{font-size:23px;margin-bottom:8px}.card h2{font-size:25px;margin:10px 0}.card p{margin:8px 0}.card button{margin-top:4px}}
 @media(prefers-reduced-motion:reduce){button{transition:none!important}}
-</style><main><header><b class="brand">✦ PIXEL FOREST</b><small>TRÒ CHƠI NHỎ / CHUYẾN ĐI LỚN</small></header><div class="top"><div><h1>Lạc vào màu xanh.</h1><p>Nhảy qua đá, nhặt đom đóm và đi xa thêm một chút.</p></div><span class="tag">01 — RỪNG BAN MAI</span></div><section><canvas width="800" height="360" aria-label="Game chạy và nhảy trong rừng pixel"></canvas><div class="hud"><span id="score">✦ 0 ĐIỂM</span><span id="best">KỶ LỤC 0</span><span id="state">SẴN SÀNG</span></div><div class="buff hidden" id="buff" role="status"><span id="buff-label"></span><progress id="buff-time" max="10" value="10"></progress></div><div id="shield-status" class="shield-status hidden" role="status"><span id="shield-label"></span><progress id="shield-meter" max="3" value="3"></progress></div><div class="overlay" id="overlay"><div class="card"><small>MỘT CHUYẾN PHIÊU LƯU PIXEL</small><h2 id="title">Rừng đang chờ bạn.</h2><p id="message">Thu thập ánh sáng. Tránh những tảng đá.<br>Bấm Space hoặc chạm để nhảy.</p><button id="start">BẮT ĐẦU →</button></div></div></section><footer><div><kbd>SPACE</kbd> nhảy &nbsp; <kbd>P</kbd> tạm dừng<p>Đom đóm +50 điểm · Lightstick: x2 điểm trong 10 giây · Bàn DJ: khiên chịu 3 va chạm.</p></div><div class="controls"><button id="fullscreen" aria-label="Bật toàn màn hình">⛶ Toàn màn hình</button><button id="music" aria-pressed="true">♫ Nhạc: bật</button><button id="pause">Ⅱ Tạm dừng</button><button id="jump">↑ NHẢY</button></div></footer></main><script>
+</style><main><header><b class="brand">✦ PIXEL FOREST</b><small>TRÒ CHƠI NHỎ / CHUYẾN ĐI LỚN</small></header><div class="top"><div><h1>Lạc vào màu xanh.</h1><p>Né chướng ngại, nhặt đom đóm và đi xa thêm một chút.</p></div><span class="tag">01 — RỪNG BAN MAI</span></div><section><canvas width="800" height="360" aria-label="Game chạy và nhảy trong rừng pixel"></canvas><div class="hud"><span id="score">✦ 0 ĐIỂM</span><span id="best">KỶ LỤC 0</span><span id="state">SẴN SÀNG</span></div><div class="buff hidden" id="buff" role="status"><span id="buff-label"></span><progress id="buff-time" max="10" value="10"></progress></div><div id="shield-status" class="shield-status hidden" role="status"><span id="shield-label"></span><progress id="shield-meter" max="3" value="3"></progress></div><div class="overlay" id="overlay"><div class="card"><small>MỘT CHUYẾN PHIÊU LƯU PIXEL</small><h2 id="title">Rừng đang chờ bạn.</h2><p id="message">Thu thập ánh sáng. Né chướng ngại Enemy thả xuống.<br>Bấm Space hoặc chạm để nhảy.</p><button id="start">BẮT ĐẦU →</button></div></div></section><footer><div><kbd>SPACE</kbd> nhảy &nbsp; <kbd>P</kbd> tạm dừng<p>Né em bé quấn khăn Enemy thả xuống · Đom đóm +50 điểm · Lightstick: x2 điểm trong 10 giây · Bàn DJ: khiên chịu 3 va chạm.</p></div><div class="controls"><button id="fullscreen" aria-label="Bật toàn màn hình">⛶ Toàn màn hình</button><button id="music" aria-pressed="true">♫ Nhạc: bật</button><button id="pause">Ⅱ Tạm dừng</button><button id="jump">↑ NHẢY</button></div></footer></main><script>
 function fullscreenChanged(){
  const active=Boolean(document.fullscreenElement);
  document.getElementById('fullscreen').textContent=active?'⛶ Thu nhỏ':'⛶ Toàn màn hình';
@@ -360,5 +360,94 @@ $('music').onclick=()=>{
  updateMusicButton();
 };
 
-function frame(now){const elapsed=last?Math.max(0,(now-last)/1000):0;let dt=Math.min((now-last)/16.67,2)||1;last=now;t+=dt;if(mode==='play'){if(shieldHP>0)djAge+=elapsed;shieldFlash=Math.max(0,shieldFlash-elapsed);shieldBurst=Math.max(0,shieldBurst-elapsed);buffLeft=Math.max(0,buffLeft-elapsed);updateBuff();let speed=3.4+Math.min(dist/4000,3);dist+=speed*dt;vy-=.58*dt;y=Math.max(0,y+vy*dt);if(y===0)vy=0;timer-=dt;if(timer<=0){const special=--spawnsUntilPower<=0;const type=special?nextSpecial:Math.random()<.35?'light':'rock';if(special){nextSpecial=nextSpecial==='dj'?'power':'dj';spawnsUntilPower=5+Math.floor(Math.random()*3)}objects.push({x:830,type,taken:false});timer=65+Math.random()*45}for(let o of objects){o.x-=speed*dt;if(!o.taken&&o.x<143&&o.x+23>112){if(o.type==='rock'&&y<25){if(shieldHP>0){o.taken=true;hitShield()}else{end();break}}if(o.type==='dj'&&y<48){o.taken=true;collectDJ()}if(o.type==='power'&&y<48){o.taken=true;collectPower()}if(o.type==='light'&&Math.abs(y-66)<36){o.taken=true;points+=buffLeft>0?100:50}}}objects=objects.filter(o=>o.x> -40);$('score').textContent='✦ '+(Math.floor(dist/8)+points)+' ĐIỂM'}rect(0,0,800,360,'#b9cfaa');rect(0,150,800,160,'#93af87');for(let l=0;l<3;l++){let spacing=100+l*47;for(let i=0;i<10;i++){let x=i*spacing-(dist*(.12+l*.13)%spacing);rect(x+28,70-l*12,13+l*5,240,'#'+['809c7a','5c805f','365f48'][l]);for(let j=0;j<3;j++){rect(x-18+j*8,35+j*32-l*15,105-j*14,46,'#'+['9bb48c','729969','477750'][l])}}}rect(0,300,800,60,'#2a4833');rect(0,299,800,7,'#7d9e56');for(let i=0;i<40;i++){let x=(i*31-dist)%820;rect(x,316+(i%4)*10,9,4,'#3c5d3e')}for(let i=0;i<17;i++){let x=(i*113-t*.25)%800;rect(x,70+(i*43)%210+Math.sin(t/30+i)*6,3,3,'#e0ed9c')}forestDetails();if(shieldHP>0)drawGoldenScene();for(let o of objects){if(o.taken)continue;if(o.type==='dj'){drawDJ(o.x,270)}else if(o.type==='power'){drawLightstick(o.x,260)}else if(o.type==='rock'){rect(o.x,277,26,23,'#69786b');rect(o.x+5,270,15,7,'#83907b');rect(o.x+4,279,8,4,'#a0aa8e');detail(o.x+7,273,9,1,'#c0c8aa');detail(o.x+17,282,1,10,'#465b50');detail(o.x+19,286,4,1,'#465b50');detail(o.x+2,277,5,2,'#91ad66');detail(o.x+4,276,3,1,'#b5ca7d')}else{rect(o.x+6,225,10,10,'#fff2a0');rect(o.x+3,228,16,4,'#e2f29b');detail(o.x+9,226,3,3,'#fffde1');detail(o.x+1,222,3,2,'#d5eab1');detail(o.x+16,221,3,2,'#d5eab1')}}let py=270-y;if(buffLeft>0)drawAura(py);drawSinger(py);if(shieldHP>0||shieldBurst>0)drawWaterShield(py);if(shieldHP>0)drawFloatingDJ();requestAnimationFrame(frame)}requestAnimationFrame(frame);$('start').onclick=start;$('jump').onclick=jump;$('pause').onclick=pause;c.onclick=jump;document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!e.repeat)jump()}if(e.code==='KeyP')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause()});
+
+function makeBabyObstacle(){
+ return {x:730,type:'baby',taken:false,age:0,dropY:98,dropSpeed:0,landed:false};
+}
+function updateBabyObstacle(o,dt){
+ o.age+=dt/60;
+ if(o.age<.6)return;
+ o.dropSpeed+=.24*dt;
+ o.dropY=Math.min(274,o.dropY+o.dropSpeed*dt);
+ o.landed=o.dropY>=274;
+}
+function babyHitsPlayer(o){
+ if(o.age<.6)return false;
+ // Use the visible swaddle bounds during both descent and ground travel.
+ const playerTop=258-y,playerBottom=302-y;
+ return playerBottom>o.dropY+3&&playerTop<o.dropY+25;
+}
+function drawEnemy(x,top,age){
+ g.save();g.translate(x,top);
+ const pal={h:'#211c26',H:'#49333e',s:'#e6b59b',S:'#f9cfb0',e:'#3d2633',w:'#f5f1e6',W:'#fffef4',v:'#b8b5c4',j:'#d8e5ed'};
+ const rows=[
+ '        j j j j         ',
+ '       jWjWjWjWj        ',
+ '      hhhhhhhhhhh       ',
+ '     hHHHHhhhhhhhh      ',
+ '     hHHhSSSSShhhh      ',
+ '     hhhSSSSSSShhh      ',
+ '     hhSSSSSSSSShh      ',
+ '     hhSSeSSSeSShh      ',
+ '     hhSSSSSSSSShh      ',
+ '     hhSSSSSSSSShh      ',
+ '     hhhSSSeeSShhh      ',
+ '     hhhhSSSSShhhh      ',
+ '     hhhjSSSSSjh h      ',
+ '    hhSSSjjjjSSShh      ',
+ '    hhSSSjjjjSSShh      ',
+ '    hhSwwjWWjwwShh      ',
+ '    hhSwwWWWWwwShh      ',
+ '    hhSwwWWWWwwShh      ',
+ '      SwwWWWWwwS        ',
+ '      SwwWWWWwwS        ',
+ '       wwWWWWww         ',
+ '       wwWWWWww         ',
+ '      wwwWWWWwww        ',
+ '      wwWWWWWWww        ',
+ '     wwwWWWWWWwww       ',
+ '     wwWWWWWWWWww       ',
+ '    wwwWWWWWWWWwww      ',
+ '    wwWWWWWWWWWWww      ',
+ '   wwwWWWWWWWWWWwww     ',
+ '   vvvvvvvvvvvvvvvv     '
+ ];
+ const u=1.45;
+ rows.forEach((row,yy)=>{for(let xx=0;xx<row.length;xx++)if(pal[row[xx]])detail((xx-12)*u,yy*u,u,u,pal[row[xx]])});
+ for(let i=0;i<24;i++){const px=-12+(i*7)%24,py=24+(i*5)%17;detail(px,py,1,1,i%3?'#d4d9e4':'#ffffff')}
+ detail(-5,12,1,.5,'#fff0d6');detail(5,12,1,.5,'#fff0d6');
+ // Arms open at the release, then return as the Enemy rises away.
+ const open=age>.6?5:0;
+ detail(-15-open,23,5,9,'#f2c4a8');detail(11+open,23,5,9,'#f2c4a8');
+ g.restore();
+}
+function drawBaby(x,top){
+ // A sleeping newborn wrapped in a soft cream-and-blue swaddle.
+ rect(x+4,top,15,4,'#dcecf2');rect(x+1,top+4,22,17,'#c1dce8');
+ rect(x+4,top+3,16,18,'#f3f3e6');rect(x+6,top+1,12,10,'#ecc3a5');
+ detail(x+7,top+3,10,6,'#ffdac0');
+ detail(x+8,top+5,2,.75,'#74545a');detail(x+13,top+5,2,.75,'#74545a');
+ detail(x+11,top+8,2,.5,'#c59085');
+ rect(x+5,top+13,15,7,'#dcebf0');rect(x+7,top+20,10,5,'#abcbdc');
+ for(let i=0;i<8;i++){detail(x+3+i*2,top+10+i,2,1,'#9fbfd2')}
+ detail(x+5,top+12,13,.5,'#ffffff');detail(x+8,top+22,7,1,'#eaf8ff');
+}
+function drawBabyObstacle(o){
+ if(o.age<1.9){
+  const exit=Math.max(0,o.age-1.15)*190;
+  drawEnemy(o.x+12,47-exit+Math.sin(o.age*5)*2,o.age);
+ }
+ if(o.age<.6){
+  // Telegraph the drop before it becomes a collidable obstacle.
+  g.save();g.globalAlpha=.55+.25*Math.sin(o.age*22);g.strokeStyle='#ffd99e';g.lineWidth=1;
+  g.setLineDash([3,5]);g.beginPath();g.moveTo(o.x+12,107);g.lineTo(o.x+12,291);g.stroke();g.setLineDash([]);
+  g.fillStyle='#ffdfa4';g.font='bold 13px monospace';g.fillText('!',o.x+9,282);g.restore();
+  drawBaby(o.x,81);
+ }else{
+  g.save();g.globalAlpha=.25;g.fillStyle='#203949';g.beginPath();g.ellipse(o.x+12,299,14,3,0,0,Math.PI*2);g.fill();g.restore();
+  drawBaby(o.x,o.dropY);
+ }
+}
+
+function frame(now){const elapsed=last?Math.max(0,(now-last)/1000):0;let dt=Math.min((now-last)/16.67,2)||1;last=now;t+=dt;if(mode==='play'){if(shieldHP>0)djAge+=elapsed;shieldFlash=Math.max(0,shieldFlash-elapsed);shieldBurst=Math.max(0,shieldBurst-elapsed);buffLeft=Math.max(0,buffLeft-elapsed);updateBuff();let speed=3.4+Math.min(dist/4000,3);dist+=speed*dt;vy-=.58*dt;y=Math.max(0,y+vy*dt);if(y===0)vy=0;timer-=dt;if(timer<=0){const special=--spawnsUntilPower<=0;const type=special?nextSpecial:Math.random()<.35?'light':'baby';if(special){nextSpecial=nextSpecial==='dj'?'power':'dj';spawnsUntilPower=5+Math.floor(Math.random()*3)}objects.push(type==='baby'?makeBabyObstacle():{x:830,type,taken:false});timer=65+Math.random()*45}for(let o of objects){o.x-=speed*dt;if(o.type==='baby')updateBabyObstacle(o,dt);if(!o.taken&&o.x<143&&o.x+23>112){if(o.type==='baby'&&babyHitsPlayer(o)){if(shieldHP>0){o.taken=true;hitShield()}else{end();break}}if(o.type==='dj'&&y<48){o.taken=true;collectDJ()}if(o.type==='power'&&y<48){o.taken=true;collectPower()}if(o.type==='light'&&Math.abs(y-66)<36){o.taken=true;points+=buffLeft>0?100:50}}}objects=objects.filter(o=>o.x> -40);$('score').textContent='✦ '+(Math.floor(dist/8)+points)+' ĐIỂM'}rect(0,0,800,360,'#b9cfaa');rect(0,150,800,160,'#93af87');for(let l=0;l<3;l++){let spacing=100+l*47;for(let i=0;i<10;i++){let x=i*spacing-(dist*(.12+l*.13)%spacing);rect(x+28,70-l*12,13+l*5,240,'#'+['809c7a','5c805f','365f48'][l]);for(let j=0;j<3;j++){rect(x-18+j*8,35+j*32-l*15,105-j*14,46,'#'+['9bb48c','729969','477750'][l])}}}rect(0,300,800,60,'#2a4833');rect(0,299,800,7,'#7d9e56');for(let i=0;i<40;i++){let x=(i*31-dist)%820;rect(x,316+(i%4)*10,9,4,'#3c5d3e')}for(let i=0;i<17;i++){let x=(i*113-t*.25)%800;rect(x,70+(i*43)%210+Math.sin(t/30+i)*6,3,3,'#e0ed9c')}forestDetails();if(shieldHP>0)drawGoldenScene();for(let o of objects){if(o.taken)continue;if(o.type==='dj'){drawDJ(o.x,270)}else if(o.type==='power'){drawLightstick(o.x,260)}else if(o.type==='baby'){drawBabyObstacle(o)}else{rect(o.x+6,225,10,10,'#fff2a0');rect(o.x+3,228,16,4,'#e2f29b');detail(o.x+9,226,3,3,'#fffde1');detail(o.x+1,222,3,2,'#d5eab1');detail(o.x+16,221,3,2,'#d5eab1')}}let py=270-y;if(buffLeft>0)drawAura(py);drawSinger(py);if(shieldHP>0||shieldBurst>0)drawWaterShield(py);if(shieldHP>0)drawFloatingDJ();requestAnimationFrame(frame)}requestAnimationFrame(frame);$('start').onclick=start;$('jump').onclick=jump;$('pause').onclick=pause;c.onclick=jump;document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!e.repeat)jump()}if(e.code==='KeyP')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause()});
 </script></html>
