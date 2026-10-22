@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import './style.css';
 import {newRun,hit,firefly,tick,SHIELD_MAX} from './rules';
 import {DJAudio} from './audio';
+import {initFirebase} from './firebase';
 // @ts-expect-error Procedural pixel art cached as textures at scene creation.
 import {paint,paintEffect} from './art.js';
 import {paintPlayer,paintSky,paintForest,paintGround,paintFerns,paintFog,paintShadow,forestLayers} from './night-art';
@@ -195,6 +196,7 @@ class Forest extends Phaser.Scene{
  clearControls(){this.keys.clear();this.touchDirections.clear();for(const id of ['left','right','jump'])$(id).classList.remove('held');this.player?.setVelocityX(0)}
  start(){
   this.clearControls();
+  void initFirebase().catch(error=>console.warn('Firebase chưa sẵn sàng; game vẫn chơi offline.',error));
   this.settingsMenu.close();this.pauseMenu.close();this.clearFeedback();this.audio.unlock();this.run=newRun(this.run.god);this.accumulator=0;this.djTime=0;this.shieldFlash=this.shieldBurst=0;this.landing=this.pickupFlash=this.entryPulse=this.trailTime=0;this.wasGrounded=false;
   this.items.clear(true,true);this.obstacles.clear(true,true);this.player.setPosition(122,groundAt(122)-1).setVelocity(0).setFrame('run0');
   this.performer.setPosition(572,-115).setVisible(false);this.djGlow.setVisible(false);this.fx.clear();

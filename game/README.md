@@ -52,3 +52,9 @@ Di chuyển trái/phải bằng phím hoặc nút cảm ứng, nhảy qua địa
 Không còn Enemy hay sinh chướng ngại. Vật phẩm nằm cố định dọc bản đồ, được khôi phục khi chơi lại. Nền trời, rừng xa và sương bám đúng khung camera; các lớp xa cuộn chậm hơn. DJ, hào quang và nhạc đi theo nhân vật khi khám phá. Điểm quãng đường chỉ tăng khi tới vị trí xa hơn trước, không tăng khi đứng yên hoặc đi qua lại.
 
 Địa hình được vẽ một lần thành các mảnh 512 đơn vị và dùng lại; không tải ảnh lớn từ mạng. Chưa đo FPS và bộ nhớ trên điện thoại thật.
+
+## Firebase
+
+Project tên `web-g`, ID `movieapp-fa2d4`; dùng Web App `web-g` (`1:1071572901905:web:4d7072ef0a493528ea11b0`). `.firebaserc` chọn đúng project cho CLI. Cấu hình web công khai ở `src/firebase.ts`; không chứa service account hay khóa Admin.
+
+Firebase Core được tải riêng khi bắt đầu chơi, không chặn game và không tải Auth/Firestore/Analytics. Đây là cấu hình SDK ban đầu; chưa có đăng nhập, lưu tiến trình online hoặc bảng xếp hạng. Dữ liệu đang có, security rules và dịch vụ trong project không bị thay đổi. Game vẫn được phát hành trên GitHub Pages. Các tính năng backend cần được tích hợp riêng cùng security rules phù hợp trước khi cho phép client đọc/ghi.
