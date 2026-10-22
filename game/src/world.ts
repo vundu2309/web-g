@@ -65,9 +65,9 @@ export function buildWorld(scene:Phaser.Scene){
   scenery.fillStyle(0x795e40);scenery.fillRect(x-14,y-2,w+28,5);scenery.fillStyle(0xb49b6b);
   for(let i=0;i<w;i+=14)scenery.fillRect(x+i,y-4,11,4);
   for(const bank of [x-18,x+w+12]){scenery.fillStyle(0x537d50);for(let i=0;i<6;i++){scenery.fillRect(bank+i*3-7,y-22-i%3*5,1,25+i%3*5);scenery.fillStyle(0xb5a775);scenery.fillRect(bank+i*3-7,y-26-i%3*5,2,5);scenery.fillStyle(0x537d50)}}
-  scene.add.text(x+18,y-50,lake.name+' · Câu cá [E]',{fontFamily:'monospace',fontSize:'10px',color:'#f2e8cb',backgroundColor:'#284b42dd',padding:{x:7,y:5}}).setDepth(12);
+  scene.add.text(x+18,y-50,lake.name+' · Câu cá [E]',{fontFamily:'Nunito',fontSize:'12px',fontStyle:'bold',color:'#f2e8cb',backgroundColor:'#284b42dd',padding:{x:7,y:5}}).setDepth(12).setResolution(2);
  }
  const ax=13950,ay=groundAt(ax);scenery.fillStyle(0x73838a);scenery.fillRect(ax,ay-100,22,100);scenery.fillRect(ax+95,ay-100,22,100);scenery.fillRect(ax-6,ay-115,130,22);scenery.lineStyle(2,0xc2bda0,.6);scenery.strokeRect(ax+5,ay-90,12,60);scenery.strokeRect(ax+100,ay-90,12,60);
- for(const r of regions)scene.add.text(r.x+260,groundAt(r.x+260)-100,r.name,{fontFamily:'monospace',fontSize:'11px',color:'#dfdcc0',backgroundColor:'#142634aa',padding:{x:9,y:6}}).setDepth(12);
+ for(const r of regions)scene.add.text(r.x+260,groundAt(r.x+260)-100,r.name,{fontFamily:'Nunito',fontSize:'12px',fontStyle:'bold',color:'#dfdcc0',backgroundColor:'#142634aa',padding:{x:9,y:6}}).setDepth(12).setResolution(2);
  return platforms;
 }

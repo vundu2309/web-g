@@ -28,7 +28,7 @@ class Forest extends Phaser.Scene{
   this.refreshAppearance();this.physics.world.setBounds(0,0,WORLD_WIDTH,WORLD_HEIGHT);this.player.setCollideWorldBounds(true).setGravityY(2088).setMaxVelocity(240,900);
   const body=this.player.body as Phaser.Physics.Arcade.Body;body.setSize(48,88);body.setOffset(24,40);this.physics.add.collider(this.player,floor);
   this.fx=this.add.graphics().setDepth(24);this.preview=this.add.image(0,0,'build-tent').setOrigin(.5,1).setDisplaySize(110,74).setDepth(22).setVisible(false);
-  this.fishLabel=this.add.text(0,0,'',{fontFamily:'monospace',fontSize:'11px',color:'#fff3bf',backgroundColor:'#254b42e8',padding:{x:6,y:4}}).setOrigin(.5,1).setDepth(25).setVisible(false);
+  this.fishLabel=this.add.text(0,0,'',{fontFamily:'Nunito',fontSize:'12px',fontStyle:'bold',color:'#fff3bf',backgroundColor:'#254b42e8',padding:{x:6,y:4}}).setOrigin(.5,1).setDepth(25).setVisible(false);
   this.restoreWorld();this.applyQuality(this.quality,false);this.centerCamera();this.bindControls();this.physics.pause();this.refreshHUD();
   if(import.meta.env.DEV)(window as unknown as {forest:Forest}).forest=this;
  }
@@ -36,6 +36,7 @@ class Forest extends Phaser.Scene{
   const key='camper-'+Object.values(this.state.equipped).join('-');
   if(!this.textures.exists(key)){const texture=this.textures.createCanvas(key,96*8,128)!,c=texture.context;c.scale(2,2);for(let i=0;i<8;i++){c.save();c.translate(i*48,0);paintCamper(c,this.state,i);c.restore()}texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);for(let i=0;i<8;i++)texture.add('run'+i,0,i*96,0,96,128)}
   this.player.setTexture(key,'run0').setDisplaySize(48,64);
+  const portrait=document.createElement('canvas');portrait.width=96;portrait.height=128;portrait.getContext('2d')!.drawImage(this.textures.get(key).getSourceImage() as HTMLCanvasElement,0,0,96,128,0,0,96,128);($('hud-avatar') as HTMLImageElement).src=portrait.toDataURL();
  }
  restoreWorld(){for(const n of resourceNodes)this.nodes.get(n.id)?.setVisible(!this.state.harvested.includes(n.id));this.structures.forEach(s=>s.destroy());this.structures=this.state.buildings.map(b=>this.add.image(b.x,groundAt(b.x)+1,'build-'+b.kind).setOrigin(.5,1).setDisplaySize(110,74).setDepth(16))}
  get pauseMenu(){return $('pause-menu') as HTMLDialogElement}
@@ -100,17 +101,17 @@ class Forest extends Phaser.Scene{
  renderInventory(){
   const source=this.textures.get(this.player.texture.key).getSourceImage() as HTMLCanvasElement,canvas=document.createElement('canvas');canvas.width=96;canvas.height=128;canvas.getContext('2d')!.drawImage(source,0,0,96,128,0,0,96,128);($('camper-preview') as HTMLImageElement).src=canvas.toDataURL();
   $('inventory-summary').textContent=this.state.wood+' gỗ · '+this.state.stone+' đá · Cần câu & bộ dụng cụ cắm trại';
-  $('gear-list').innerHTML=(Object.keys(slots) as Slot[]).map(slot=>'<section class="gear-slot"><h3>'+slots[slot]+'</h3><div class="gear-options">'+gear.filter(g=>g.slot===slot).map(g=>'<button data-gear="'+g.id+'" aria-pressed="'+(this.state.equipped[slot]===g.id)+'"><i style="--swatch:'+g.color+'"></i><span>'+g.name+'</span><small>'+(this.state.equipped[slot]===g.id?'Đang mặc':'Trang bị')+'</small></button>').join('')+'</div></section>').join('');
-  $('fish-list').innerHTML=fishSpecies.map(f=>{const own=this.state.fish[f.id];return '<div class="fish-entry '+(own?'caught':'')+'"><span class="fish-icon" style="--fish:'+f.color+'">◀●</span><div><strong>'+(own?f.name:'???')+'</strong><small>'+f.rarity+(own?' · Lớn nhất '+own.largest+' cm':' · Chưa khám phá')+'</small></div><b>×'+(own?.count??0)+'</b></div>'}).join('');
+  $('gear-list').innerHTML=(Object.keys(slots) as Slot[]).map(slot=>'<section class="gear-slot"><h3>'+slots[slot]+'</h3><div class="gear-options">'+gear.filter(g=>g.slot===slot).map(g=>'<button data-gear="'+g.id+'" aria-pressed="'+(this.state.equipped[slot]===g.id)+'"><i class="gear-icon gear-'+slot+'" style="--swatch:'+g.color+'"></i><span>'+g.name+'</span><small>'+(this.state.equipped[slot]===g.id?'Đang mặc':'Trang bị')+'</small></button>').join('')+'</div></section>').join('');
+  $('fish-list').innerHTML=fishSpecies.map(f=>{const own=this.state.fish[f.id];return '<div class="fish-entry '+(own?'caught':'')+'"><span class="fish-icon" style="--fish:'+f.color+'"><svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-fish"/></svg></span><div><strong>'+(own?f.name:'???')+'</strong><small>'+f.rarity+(own?' · Lớn nhất '+own.largest+' cm':' · Chưa khám phá')+'</small></div><b>×'+(own?.count??0)+'</b></div>'}).join('');
   const counts=Object.values(this.state.fish).reduce((n,f)=>n+(f?.count??0),0);$('fish-summary').textContent=counts+' cá · '+Object.keys(this.state.fish).length+'/'+fishSpecies.length+' loài';
  }
  renderRecipes(){$('build-resources').textContent='Bạn có '+this.state.wood+' gỗ · '+this.state.stone+' đá';$('recipe-list').innerHTML=(Object.keys(recipes) as BuildingKind[]).map(kind=>{const r=recipes[kind],enough=this.state.wood>=r.wood&&this.state.stone>=r.stone;const texture=this.textures.get('build-'+kind).getSourceImage() as HTMLCanvasElement;return '<button class="recipe" data-build="'+kind+'" '+(enough?'':'disabled')+'><img src="'+texture.toDataURL()+'" alt=""><div><strong>'+r.name+'</strong><p>'+r.description+'</p><small>'+r.wood+' gỗ · '+r.stone+' đá</small></div><span>'+(enough?'Đặt →':'Thiếu')+'</span></button>'}).join('')}
  refreshHUD(){
   if(!this.player)return;
-  const total=Object.values(this.state.fish).reduce((n,f)=>n+(f?.count??0),0);$('score').textContent='GỖ '+this.state.wood+' · ĐÁ '+this.state.stone;$('effects').textContent=this.status==='pause'?'TẠM DỪNG':total+' CÁ · '+this.state.buildings.length+' CÔNG TRÌNH';
+  const total=Object.values(this.state.fish).reduce((n,f)=>n+(f?.count??0),0);$('hud-wood').textContent=String(this.state.wood);$('hud-stone').textContent=String(this.state.stone);$('effects').textContent=this.status==='pause'?'TẠM DỪNG':total+' cá · '+this.state.buildings.length+' công trình';
   $('chapter').querySelector('span')!.textContent=waterAt(this.player.x)?.name??regionAt(this.player.x).name;
-  ($('pause') as HTMLButtonElement).disabled=this.status==='ready';$('pause').innerHTML='<span aria-hidden="true">'+(this.status==='pause'?'▶':'Ⅱ')+'</span>';$('pause').setAttribute('aria-label',this.status==='pause'?'Tiếp tục game':'Tạm dừng game');
-  const node=this.nearbyNode(),lake=waterAt(this.player.x);$('action-label').textContent=this.selected?'ĐẶT '+recipes[this.selected].name.toUpperCase():this.fishing?.phase==='bite'?'GIẬT CẦN!':this.fishing?'CHỜ CÁ…':node?node.kind==='wood'?'NHẶT GỖ':'NHẶT ĐÁ':lake?'CÂU CÁ':'TƯƠNG TÁC';
+  ($('pause') as HTMLButtonElement).disabled=this.status==='ready';$('pause').innerHTML=this.status==='pause'?'<svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 1h2v2h3v2h3v2h3v2h-3v2H8v2H5v2H3z"/></svg>':'<svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-pause"/></svg>';$('pause').setAttribute('aria-label',this.status==='pause'?'Tiếp tục game':'Tạm dừng game');
+  const node=this.nearbyNode(),lake=waterAt(this.player.x);$('action-label').textContent=this.selected?'Đặt '+recipes[this.selected].name:this.fishing?.phase==='bite'?'Giật cần!':this.fishing?'Chờ cá…':node?node.kind==='wood'?'Nhặt gỗ':'Nhặt đá':lake?'Câu cá':'Tương tác';
   $('action').classList.toggle('bite',this.fishing?.phase==='bite');$('cancel-action').hidden=!this.selected&&!this.fishing;
  }
  update(_time:number,delta:number){if(this.status!=='play')return;this.accumulator+=Math.min(delta/1000,.1);while(this.accumulator>=STEP&&this.status==='play'){this.simulate(STEP);this.physics.world.update(this.clock*1000,1000/60);this.physics.world.postUpdate();this.centerCamera();this.accumulator-=STEP}this.drawWorldEffects();this.refreshHUD()}
@@ -129,6 +130,6 @@ class Forest extends Phaser.Scene{
   for(const b of this.state.buildings)if(b.kind==='fire'&&Math.abs(b.x-this.player.x)<650){const y=groundAt(b.x)-15;f.fillStyle(0xffc66d,.07);f.fillCircle(b.x,y,34+Math.sin(this.clock*4)*3);f.fillStyle(0xffdda0,.9);for(let i=0;i<3;i++)f.fillRect(b.x-7+i*7,y-((this.clock*20+i*9)%25),1,2)}
  }
 }
-const game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:800*SCALE,height:360*SCALE,backgroundColor:'#afc1b0',roundPixels:true,antialias:true,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:0},fps:60,fixedStep:true,customUpdate:true}},scene:Forest});
+const game=document.fonts.load('800 14px Nunito','Ao Sen Gỗ Đá câu cá ế ệ').catch(()=>[]).then(()=>new Phaser.Game({type:Phaser.AUTO,parent:'game',width:800*SCALE,height:360*SCALE,backgroundColor:'#afc1b0',roundPixels:true,antialias:true,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:0},fps:60,fixedStep:true,customUpdate:true}},scene:Forest}));
 export default game;
 if(import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})});

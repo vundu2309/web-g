@@ -37,3 +37,9 @@ Dev: http://localhost:5173. Kiểm thử gồm quy tắc kho/trang bị/cá/xây
 Trên GitHub, source ở `game/`, thư mục gốc là nội dung `dist/` đã build để GitHub Pages phục vụ từ `main` / root. Đường dẫn tương đối hỗ trợ `/web-g/`. Service worker cache bản game, kể cả Firebase Core; manifest hỗ trợ cài PWA. Không còn DJ, nhạc, lightstick, aura, khiên, Enemy hoặc vật phẩm arcade.
 
 Map dùng mảnh canvas 512 đơn vị vẽ một lần, không tải ảnh đồ họa từ mạng. Chế độ Tiết kiệm render 800×360, Đẹp 1600×720. Chưa đo hiệu năng và pin trên điện thoại thật.
+
+## HUD và typography
+
+Giao diện cozy pixel dùng viền nét thẳng, bóng đổ cứng, icon SVG 16×16 và thanh công cụ dạng ô vật phẩm. Chân dung HUD thay cùng trang bị; gỗ/đá, cá và công trình cập nhật từ trạng thái game. Menu kho đồ dùng ô trang bị và hình đại diện thực tế.
+
+Font Nunito variable 400–900, subset Latin + Vietnamese (~51 KB WOFF2), được đóng gói trong `public/fonts/` và cache offline. Game không gọi Google Fonts khi chơi. Giấy phép OFL ở `public/fonts/OFL-Nunito.txt`; nguồn Google Fonts: https://github.com/google/fonts/tree/main/ofl/nunito. Chữ Nunito dùng cả trong HUD, menu và nhãn trên map; chờ font sẵn sàng trước khi tạo canvas chữ.

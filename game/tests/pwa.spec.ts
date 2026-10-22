@@ -6,5 +6,5 @@ test('production app reloads offline from its own cache',async({page,context})=>
  const manifest=await page.evaluate(async()=>await(await fetch(document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!.href)).json());
  expect(manifest.display).toBe('standalone');
  await context.setOffline(true);await page.reload();await page.waitForFunction(()=>Boolean(document.querySelector('canvas')));
- await page.locator('#start').click();await expect(page.locator('#welcome')).toBeHidden();expect(errors).toEqual([]);
+ expect(await page.evaluate(()=>document.fonts.check('800 14px Nunito','Gỗ Đá câu cá'))).toBe(true);await page.locator('#start').click();await expect(page.locator('#welcome')).toBeHidden();expect(errors).toEqual([]);
 });
