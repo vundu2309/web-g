@@ -1,26 +1,24 @@
 # Pixel Forest
 
-Game chạy và nhảy trong rừng pixel, viết bằng HTML, CSS và JavaScript thuần, không cần cài thư viện hoặc build.
+Game Phaser 3.90 với rừng đêm, DJ, khiên bảo vệ và nhạc.
 
-## Chơi game
+Chơi tại https://vundu2309.github.io/web-g/
 
-Bản online: https://pixel-forest-run.gladloom9.chatgpt.site/
+## Mã nguồn và phát hành
 
-- Space / ↑ hoặc nút NHẢY: nhảy tránh đá và thu thập đom đóm.
-- P hoặc nút Tạm dừng: tạm dừng / tiếp tục.
-- Mỗi đom đóm cộng 50 điểm; tốc độ tăng theo quãng đường.
-- Kỷ lục lưu trong trình duyệt bằng localStorage.
-
-## Chạy trên máy
-
-Mở `index.html` bằng trình duyệt, hoặc chạy từ thư mục repository:
+Mã nguồn ở `game/`. Thư mục gốc chứa nội dung build để GitHub Pages phục vụ từ nhánh `main`, thư mục `/ (root)`.
 
 ```sh
-python3 -m http.server 8000
+cd game
+npm ci
+npm run dev
+npm test
+npm run test:e2e
+npm run build
 ```
 
-Truy cập http://localhost:8000.
+Khi phát hành: chép toàn bộ nội dung `game/dist/` ra thư mục gốc repository rồi commit cùng mã nguồn. Giữ `.nojekyll`. Không chép source `game/index.html` ra gốc.
 
-## Mã nguồn
+Nhạc nằm ở `game/public/assets/audio/song-gio.mp3`, được build ra `assets/audio/song-gio.mp3`. Nhạc chỉ phát sau tương tác khi có hiệu ứng DJ và bật âm nhạc.
 
-`index.html` chứa toàn bộ giao diện và logic game.
+Manifest và service worker hỗ trợ cài đặt và cache game offline; nhạc không được cache trước.

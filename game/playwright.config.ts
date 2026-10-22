@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'tests',workers:1,webServer:[{command:'npm run dev',url:'http://127.0.0.1:5173',reuseExistingServer:true},{command:'npm run preview -- --port 4173',url:'http://127.0.0.1:4173',reuseExistingServer:true}],use:{headless:true,launchOptions:{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']}}});
