@@ -1,1 +1,3 @@
-interface ImportMeta {readonly env:{readonly DEV:boolean;readonly PROD:boolean}}
+interface ImportMeta {
+  readonly env: {readonly DEV: boolean; readonly PROD: boolean};
+}

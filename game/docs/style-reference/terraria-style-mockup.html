@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup phong cách — Pixel Forest (hướng Terraria)</title>
+<style>
+:root{--ink:#263d31;--cream:#f0e4be;--gold:#d9b973;--pine:#415f44;--bg:#16221e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--cream);font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:16px 20px 6px;max-width:1500px;margin:0 auto}
+h1{margin:0 0 2px;font-size:20px}
+header p{margin:0;color:#b9c4a8}
+.bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px;max-width:1500px;margin:0 auto}
+button{font:700 13px system-ui,sans-serif;color:var(--cream);background:var(--pine);border:3px solid var(--ink);border-radius:0;padding:7px 12px;cursor:pointer;box-shadow:3px 3px 0 #0e1a14}
+button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+button:focus-visible{outline:3px solid #df9e45;outline-offset:2px}
+.stage{padding:0 20px;max-width:1500px;margin:0 auto}
+canvas{display:block;margin:0 auto;image-rendering:pixelated;border:3px solid var(--ink);box-shadow:5px 5px 0 #0e1a14;background:#000}
+.notes{max-width:1500px;margin:18px auto;padding:0 20px 30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.card{background:#213a2f;border:3px solid var(--ink);padding:12px 14px}
+.card h2{margin:0 0 6px;font-size:14px;color:var(--gold)}
+.card ul{margin:0;padding-left:18px}
+.card li{margin:2px 0}
+small{color:#9fb08e}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mockup phong cách — hướng Terraria (Mức A: chỉ hình ảnh)</h1>
+  <p>Một cảnh tĩnh để duyệt phong cách trước khi lập trình. Toàn bộ art được vẽ gốc bằng code. Gameplay vẫn là đi, nhặt, câu cá, dựng trại.</p>
+</header>
+<div class="bar" id="bar">
+  <button data-time="day" aria-pressed="true">Ngày</button>
+  <button data-time="dusk" aria-pressed="false">Hoàng hôn</button>
+  <button data-time="night" aria-pressed="false">Đêm</button>
+  <button id="tLight" aria-pressed="true">Ánh sáng theo ô</button>
+  <button id="tGrid" aria-pressed="false">Lưới ô 16×16</button>
+</div>
+<div class="stage"><canvas id="c" aria-label="Cảnh mockup phong cách Terraria"></canvas></div>
+<div class="notes">
+  <div class="card"><h2>Quy tắc phong cách đề xuất</h2><ul>
+    <li>Ô (tile) 16×16 pixel nghệ thuật, mỗi pixel nghệ thuật là một ô vuông thô.</li>
+    <li>Mỗi chất liệu 3–4 tông, tô bóng theo nguồn sáng trên-trái, không viền đen dày.</li>
+    <li>Mép ô tiếp xúc không khí được làm tối/sáng để thành khối (autotile).</li>
+    <li>Bảng màu ấm, bão hòa vừa phải; đêm chuyển sang xanh lam, lửa và pha lê là nguồn sáng.</li>
+  </ul></div>
+  <div class="card"><h2>Chiều sâu cảnh</h2><ul>
+    <li>Trời có dải dither, mây 3 tông, mặt trời/trăng.</li>
+    <li>Hai lớp núi xa, rừng xa, rừng gần (parallax khi lập trình).</li>
+    <li>Mặt đất: cỏ phủ, đất, đá, quặng đồng/sắt, cát đáy hồ.</li>
+    <li>Hang có tường nền tối, ống đào xuống và hang kín có pha lê phát sáng.</li>
+  </ul></div>
+  <div class="card"><h2>Ánh sáng và sinh động</h2><ul>
+    <li>Ánh sáng lan theo từng ô: tối dần khi xuống sâu, có màu theo nguồn (lửa cam, pha lê lam).</li>
+    <li>Nguồn sáng: bếp lửa, đèn lồng, đuốc, lều (ban đêm), nấm và pha lê.</li>
+    <li>Nước nhiều tông, cá nhảy, gợn sóng, sen, sậy; đom đóm về đêm.</li>
+  </ul></div>
+  <div class="card"><h2>Điều cần bạn duyệt</h2><ul>
+    <li>Độ chi tiết và độ "thô" của pixel có đúng ý chưa?</li>
+    <li>Bảng màu (ấm hay lạnh hơn), độ tối ban đêm, độ sáng hang.</li>
+    <li>Kích thước nhân vật so với ô (hiện ~20×36 pixel, hơn 2 ô cao).</li>
+    <li>Có muốn thêm gì: sương, tia sáng, chim, bướm, dung nham, tuyết...</li>
+  </ul><small>Dùng nút Ánh sáng và Lưới ô để xem cấu trúc bên dưới.</small></div>
+</div>
+<script>
+'use strict';
+const W=480,H=270,T=16,COLS=30,ROWS=17;
+const cv=document.getElementById('c');cv.width=W;cv.height=H;
+const ctx=cv.getContext('2d');const img=ctx.createImageData(W,H);
+const R=new Float32Array(W*H),G=new Float32Array(W*H),B=new Float32Array(W*H),LIT=new Uint8Array(W*H);
+const hex=s=>[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];
+const mul=(c,k)=>[c[0]*k,c[1]*k,c[2]*k];
+const lerpC=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+function hash(x,y,s){x|=0;y|=0;let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul((s|0)+7,2147483629))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296}
+function set(x,y,c,lit=1,a=1){x=Math.floor(x);y=Math.floor(y);if(x<0||y<0||x>=W||y>=H)return;const i=y*W+x;
+  if(a>=1){R[i]=c[0];G[i]=c[1];B[i]=c[2]}else{R[i]+=(c[0]-R[i])*a;G[i]+=(c[1]-G[i])*a;B[i]+=(c[2]-B[i])*a}
+  if(lit)LIT[i]=1}
+function rect(x,y,w,h,c,lit=1){for(let j=0;j<h;j++)for(let i=0;i<w;i++)set(x+i,y+j,c,lit)}
+function line(x0,y0,x1,y1,c,lit=1){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);
+  const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
+  for(;;){set(x0,y0,c,lit);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+const BAY=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+
+/* ---------- Bảng màu ---------- */
+const P={
+ dirt:['#6e4b33','#7d583b','#5b3f2b','#8f6a49'].map(hex),
+ grass:['#56933c','#68a947','#437a31','#86c45a'].map(hex),
+ stone:['#5f6573','#6f7685','#505662','#818a9a'].map(hex),
+ sand:['#cbb47c','#dac48c','#b9a068','#e8d49e'].map(hex),
+ wallD:['#3b2b1f','#44321f','#32251a','#4c3924'].map(hex),
+ wallS:['#2c3039','#343944','#262a32','#3b404b'].map(hex),
+ copper:['#e08a45','#f5b46e','#a35c28'].map(hex),
+ iron:['#c2b3a8','#9a8a82','#e6dbd0'].map(hex),
+ bark:['#5a3d26','#6e4a2e','#7d5636','#442c1b'].map(hex),
+ leaf:['#2f6b3a','#3f8a46','#59a852','#86cc6a'].map(hex),
+};
+const pick=(t,n)=>n<.45?t[0]:n<.75?t[1]:n<.92?t[2]:t[3];
+
+const TIMES={
+ day:{sky:['#3f86d6','#7fbbe8','#d3edf6'],sun:{x:380,y:44,r:9,c:'#fff3b0'},moon:null,
+  mtnFar:'#8fb3d4',mtnFarHi:'#b8d3e9',mtnMid:'#5f8fae',mtnMidHi:'#88b2ca',forestFar:'#3f7a5a',forestNear:'#2f6a45',
+  cloud:['#ffffff','#e0ecf7','#bcd0e4'],light:[1,1,1],bloom:.2,stars:false,haze:'#cfe6ef'},
+ dusk:{sky:['#33387f','#cf5f7c','#ffb56c'],sun:{x:330,y:104,r:15,c:'#ffd27a'},moon:null,
+  mtnFar:'#8a6a9a',mtnFarHi:'#c78aa2',mtnMid:'#5a4a7a',mtnMidHi:'#8c6a8c',forestFar:'#3a4a5c',forestNear:'#2a3a4a',
+  cloud:['#ffc9a2','#e88a8c','#a8608c'],light:[1,.8,.64],bloom:.55,stars:false,haze:'#f1a67c'},
+ night:{sky:['#060a24','#15204c','#2d4177'],sun:null,moon:{x:236,y:46,r:9},
+  mtnFar:'#1f2f55',mtnFarHi:'#34487c',mtnMid:'#18254a',mtnMidHi:'#2b3e6e',forestFar:'#12223a',forestNear:'#0e1b2f',
+  cloud:['#3b4d7d','#2b3b69','#1f2c55'],light:[.3,.4,.66],bloom:1,stars:true,haze:'#2d4177'},
+};
+let S=TIMES.day;
+
+/* ---------- Địa hình theo ô ---------- */
+const surf=[8,8,8,8,8,8,8,9,9,9,9,9,9,9,9,9,9,9,10,11,12,12,12,12,11,10,9,9,8,8];
+const LAKE=[18,25],WATER=9;
+const tile=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+const wall=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
+  if(r>=surf[c]){const d=r-surf[c];const lake=c>=LAKE[0]&&c<=LAKE[1];
+    let t=d<3+(hash(c,r,1)>.5?1:0)?1:2;if(lake&&d<2)t=3;tile[r][c]=t}
+  if(r>=surf[c]+1)wall[r][c]=r<surf[c]+4?1:2;
+}
+function carve(cx,cy,rx,ry){for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const a=(c+.5-cx)/rx,b=(r+.5-cy)/ry;if(a*a+b*b<1)tile[r][c]=0}}
+for(let r=8;r<=10;r++)tile[r][3]=0;for(let r=9;r<=12;r++)tile[r][4]=0;
+carve(5.6,13,3.4,1.9);carve(15,13.6,2.5,1.4);
+const ore=(t,cells)=>cells.forEach(([c,r])=>{if(tile[r]&&tile[r][c]>0)tile[r][c]=t});
+ore(4,[[8,13],[9,13],[8,14],[9,15],[10,14]]);ore(5,[[11,11],[12,11],[12,12],[11,15],[12,15],[10,15]]);
+const isSolid=(c,r)=>c<0||c>=COLS||r>=ROWS?true:r<0?false:tile[r][c]>0;
+const isWater=(c,r)=>c>=LAKE[0]&&c<=LAKE[1]&&r>=WATER&&r<surf[c];
+
+/* ---------- Trời, núi, mây ---------- */
+function drawSky(){
+  const N=14,cols=S.sky.map(hex);
+  for(let y=0;y<H;y++){const t=Math.min(1,y/(H*.58)),pos=t*N,band=Math.floor(pos),fr=pos-band;
+    for(let x=0;x<W;x++){const b=Math.min(N,band+(fr>BAY[y&3][x&3]?1:0))/N;
+      const c=b<.5?lerpC(cols[0],cols[1],b*2):lerpC(cols[1],cols[2],(b-.5)*2);set(x,y,c,0)}}
+}
+function disc(cx,cy,r,col,lit=0){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)if(x*x+y*y<=r*r)set(cx+x,cy+y,col,lit)}
+function glow(cx,cy,r,col,k){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=Math.hypot(x,y);if(d<r){const a=Math.pow(1-d/r,2)*k;
+  const X=cx+x,Y=cy+y;if(X<0||Y<0||X>=W||Y>=H)continue;const i=Y*W+X;R[i]+=(col[0]-R[i])*a;G[i]+=(col[1]-G[i])*a;B[i]+=(col[2]-B[i])*a}}}
+function drawCelestial(){
+  if(S.sun){glow(S.sun.x,S.sun.y,S.sun.r*4.5,hex(S.sun.c),.45);disc(S.sun.x,S.sun.y,S.sun.r,hex(S.sun.c));disc(S.sun.x-2,S.sun.y-2,Math.max(2,S.sun.r-4),[255,255,235])}
+  if(S.moon){const m=S.moon;glow(m.x,m.y,m.r*4,[190,210,255],.35);disc(m.x,m.y,m.r,[232,238,250]);
+    disc(m.x+3,m.y-2,2,[205,214,232]);disc(m.x-3,m.y+3,2,[210,218,236]);disc(m.x+2,m.y+4,1,[205,214,232]);
+    for(let y=-m.r;y<=m.r;y++)for(let x=-m.r;x<=m.r;x++)if(x*x+y*y<=m.r*m.r&&x+y>m.r*.8)set(m.x+x,m.y+y,[190,200,222],0)}
+  if(S.stars)for(let i=0;i<110;i++){const x=Math.floor(hash(i,1,3)*W),y=Math.floor(hash(i,2,3)*120);const b=.5+hash(i,3,3)*.5;
+    set(x,y,[255*b,250*b,230*b],0);if(hash(i,4,3)>.9){set(x+1,y,[200,210,255],0);set(x-1,y,[200,210,255],0);set(x,y+1,[200,210,255],0);set(x,y-1,[200,210,255],0)}}
+}
+function cloud(x,y,s){const cc=S.cloud.map(hex),parts=[[-18,4,9],[-8,-3,12],[8,-6,13],[21,1,10],[33,5,8],[2,6,12]];
+  const x0=Math.floor(x-30*s),x1=Math.ceil(x+44*s);
+  for(let px=x0;px<=x1;px++){let ymin=1e9,ymax=-1e9;
+    for(const [dx,dy,r] of parts){const rr=r*s,cx=x+dx*s,cy=y+dy*s,d=px-cx;if(Math.abs(d)<rr){const h=Math.sqrt(rr*rr-d*d);ymin=Math.min(ymin,cy-h);ymax=Math.max(ymax,cy+h)}}
+    if(ymin>1e8)continue;ymax=Math.min(ymax,y+9*s);
+    for(let py=Math.ceil(ymin);py<=ymax;py++){const t=(py-ymin)/Math.max(1,ymax-ymin);set(px,py,t<.3?cc[0]:t<.7?cc[1]:cc[2],0)}}}
+function ridge(base,amp,f,p,col,hi,haze,hz){const c=hex(col),h=hex(hi),hz2=hex(haze);
+  for(let x=0;x<W;x++){const v=(1-Math.abs(Math.sin(x*f+p)))*.62+(1-Math.abs(Math.sin(x*f*2.37+p*1.7)))*.38;const y=Math.round(base-amp*v);
+    for(let py=y;py<H;py++){let k=0;if(py-y<2)k=1;const dep=(py-y)/(base-y+40);let cc=k?h:c;
+      cc=lerpC(cc,hz2,Math.max(0,Math.min(hz,dep*hz*1.4)*(((py+x)&1)?1:.6)));set(x,py,cc,0)}}}
+function forest(base,col,hi,seed){const c=hex(col),h=hex(hi);
+  for(let x0=-8;x0<W+10;x0+=10){const r=11+hash(x0,seed,4)*14,cx=x0+hash(x0,seed,5)*6,cy=base-r*.4;
+    for(let y=-Math.ceil(r);y<=r;y++)for(let x=-Math.ceil(r);x<=r;x++)if(x*x+y*y<r*r)set(cx+x,cy+y,(y<-r*.35&&hash(cx+x,cy+y,seed)>.5)?h:c,0)}
+  rect(0,base-2,W,H,c,0)}
+function drawBackdrop(){drawSky();drawCelestial();
+  cloud(70,36,1);cloud(200,62,.8);cloud(330,30,1.15);cloud(440,74,.75);
+  const toHex=c=>c.map(Math.round).reduce((a,v)=>a+v.toString(16).padStart(2,'0'),'#');
+  ridge(142,86,.021,.4,S.mtnFar,S.mtnFarHi,S.haze,.3);
+  ridge(150,52,.034,2.1,S.mtnMid,S.mtnMidHi,S.haze,.18);
+  forest(140,S.forestFar,toHex(lerpC(hex(S.forestFar),hex(S.haze),.3)),11);
+  forest(150,S.forestNear,toHex(lerpC(hex(S.forestNear),hex(S.forestFar),.45)),23);
+}
+
+/* ---------- Ô đất ---------- */
+function grassDepth(gx){return 3+Math.floor(hash(gx,0,4)*3)}
+function solidPix(t,c,r,px,py,nb){
+  const gx=c*T+px,gy=r*T+py,clump=hash(gx>>1,gy>>1,t+3),fine=hash(gx,gy,t+9),n=clump*.6+fine*.4;let col;
+  if(t===1){col=pick(P.dirt,n);if(hash(gx,gy,77)>.988)col=mul(P.dirt[2],.6);if(hash(gx>>1,gy>>1,5)>.95&&((px+py)&1)===0)col=hex('#a58f73')}
+  else if(t===3){col=pick(P.sand,n);if(hash(gx,gy,78)>.97)col=P.sand[2]}
+  else{col=pick(P.stone,n);const cr=(gx+gy*2+Math.floor(hash(gx>>3,gy>>3,2)*8))%11===0&&hash(gx>>2,gy>>2,3)>.62;if(cr)col=mul(P.stone[2],.7);
+    if(t===4||t===5){const tn=t===4?P.copper:P.iron,dx=px-7.5,dy=py-7.5,d=Math.hypot(dx,dy);
+      if(d<5.5+hash(gx,gy,6)*2.2&&hash(gx>>1,gy>>1,t)>.3){col=pick([tn[0],tn[0],tn[2],tn[1]],hash(gx,gy,8));if(py<8&&px<8&&hash(gx,gy,9)>.6)col=tn[1]}}}
+  if(t===1){const sideG=(nb.left&&!nb.leftW&&px<2&&py<9)||(nb.right&&!nb.rightW&&px>13&&py<9);
+    if((nb.up&&!nb.upW&&py<grassDepth(gx))||sideG){col=pick(P.grass,n);if(py===grassDepth(gx)-1||(sideG&&py===8))col=mul(P.grass[2],.8);else if(py===0)col=P.grass[3]}}
+  if(nb.up&&py===0&&t!==1)col=mul(col,1.2);
+  if(nb.down&&py===15)col=mul(col,.7);
+  if(nb.left&&px===0)col=mul(col,.78);
+  if(nb.right&&px===15)col=mul(col,.78);
+  return col}
+function wallPix(k,c,r,px,py){const gx=c*T+px,gy=r*T+py,tones=k===1?P.wallD:P.wallS,n=hash(gx>>1,gy>>1,k)*.6+hash(gx,gy,k+1)*.4;
+  let col=pick(tones,n);if(((gy+(Math.floor(gx/8)&1)*4)%8)===0)col=mul(col,.82);if(gx%8===0)col=mul(col,.88);return col}
+function drawWalls(){for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(!tile[r][c]&&wall[r][c]&&!isWater(c,r))
+  for(let py=0;py<T;py++)for(let px=0;px<T;px++)set(c*T+px,r*T+py,wallPix(wall[r][c],c,r,px,py))}
+function drawTiles(){for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const t=tile[r][c];if(!t)continue;
+  const nb={up:!isSolid(c,r-1),left:!isSolid(c-1,r),right:!isSolid(c+1,r),down:!isSolid(c,r+1),upW:isWater(c,r-1),leftW:isWater(c-1,r),rightW:isWater(c+1,r)};
+  for(let py=0;py<T;py++)for(let px=0;px<T;px++)set(c*T+px,r*T+py,solidPix(t,c,r,px,py,nb))}}
+function drawWater(){const body=hex('#2f7fb8'),deep=hex('#164f86'),top=hex('#bfe9ff');
+  for(let c=LAKE[0];c<=LAKE[1];c++)for(let r=WATER;r<surf[c];r++)for(let py=0;py<T;py++)for(let px=0;px<T;px++){
+    const gx=c*T+px,gy=r*T+py,depth=(gy-WATER*T)/((surf[c]-WATER)*T+1);let col=lerpC(body,deep,Math.min(1,depth*.9));
+    if(hash(gx>>2,gy,31)>.93)col=lerpC(col,top,.35);const a=.66;
+    set(gx,gy,col,1,a)}
+  for(let x=LAKE[0]*T;x<(LAKE[1]+1)*T;x++){const y=WATER*T;set(x,y,top,1,.9);if(hash(x>>1,1,32)>.55)set(x,y+1,hex('#8fd0f2'),1,.7);if(hash(x,2,33)>.93)set(x,y-1,[235,250,255],1,.8)}}
+
+/* ---------- Cây, cỏ, vật trang trí ---------- */
+function groundY(x){return surf[Math.max(0,Math.min(COLS-1,Math.floor(x/T)))]*T}
+function drawTree(x,base,h,seed,canopyR){
+  const tw=9;for(let y=0;y<h;y++){const flare=y<10?(10-y)*.6:0,w=tw+flare;
+    for(let dx=-Math.ceil(w/2);dx<=Math.ceil(w/2);dx++){const e=Math.abs(dx)/(w/2);const tone=e>.8?P.bark[3]:(dx<-w*.15?P.bark[2]:(hash(dx,y>>1,seed)>.6?P.bark[0]:P.bark[1]));set(x+dx,base-y,tone)}}
+  for(let i=0;i<3;i++){const by=base-h*(.35+.18*i),dir=i%2?1:-1;for(let k=0;k<12;k++)set(x+dir*(4+k),by-Math.floor(k*.6),P.bark[(k>6?0:1)])}
+  const cy=base-h-canopyR*.25,blobs=[[0,0,1],[-.85,.35,.75],[.85,.3,.8],[-.4,-.5,.7],[.45,-.55,.7],[0,.55,.8]];
+  const mask=new Map();
+  for(const [bx,by,bs] of blobs){const rr=canopyR*bs*.62,cx=x+bx*canopyR*.8,cyy=cy+by*canopyR*.55;
+    for(let yy=-Math.ceil(rr);yy<=rr;yy++)for(let xx=-Math.ceil(rr);xx<=rr;xx++)if(xx*xx+yy*yy<rr*rr){mask.set(Math.round(cx+xx)+','+Math.round(cyy+yy),1)}}
+  for(const k of mask.keys()){const [px,py]=k.split(',').map(Number);
+    const l=((px-x)*-.45+(py-cy)*-.75)/canopyR+hash(px,py,seed)*.55;
+    let idx=l>.62?3:l>.28?2:l>-.12?1:0;
+    const bottomEdge=!mask.has(px+','+(py+1)),rightEdge=!mask.has((px+1)+','+py);
+    let col=P.leaf[idx];if(bottomEdge||rightEdge)col=mul(P.leaf[0],.75);
+    if(hash(px,py,seed+5)>.93)col=mul(col,.78);set(px,py,col)}}
+function drawDecor(){
+  for(let x=0;x<W;x++){const c=Math.floor(x/T),top=surf[c]*T;if(c>=LAKE[0]&&c<=LAKE[1])continue;
+    const n=hash(x,0,11);if(n<.55){const h=1+Math.floor(n*9)%4;for(let k=1;k<=h;k++)set(x,top-k,k===h?P.grass[3]:P.grass[1])}
+    if(hash(x,0,12)>.985){const col=[[217,83,79],[242,201,76],[240,240,235],[170,120,220]][Math.floor(hash(x,1,12)*4)];
+      line(x,top-1,x,top-6,hex('#3f7a31'));rect(x-1,top-8,3,2,col);set(x,top-9,col);set(x,top-8,[255,235,150])}}
+  // bụi sậy bên hồ
+  for(const bx of [LAKE[0]*T-6,LAKE[1]*T+T+8]){const top=groundY(bx);for(let i=0;i<7;i++){const x=bx-6+i*2,h=18+Math.floor(hash(x,1,13)*14);
+    for(let y=0;y<h;y++)set(x+Math.floor(Math.sin(y*.15+i)*1.2),top-y,y>h-5?hex('#8a5a32'):(y%7<3?P.grass[1]:P.grass[2]));
+    if(i%2===0)rect(x-1,top-h-5,3,6,hex('#7a4a28'))}}
+  // lá sen
+  for(const [lx,ly] of [[318,148],[344,153],[372,150],[394,154]]){for(let x=-6;x<=6;x++)for(let y=-1;y<=1;y++)if((x*x)/36+y*y<1)set(lx+x,ly+y,hex(y<0?'#6dbb5a':'#3f8a46'));rect(lx+1,ly,4,1,hex('#2f6b3a'))}
+  rect(342,150,2,2,[240,160,190]);set(343,149,[255,210,225]);
+  // đá nhỏ và nấm
+  for(const [rx,ry,rs] of [[60,128,1],[210,144,1],[166,144,1.3]]){for(let y=0;y<5*rs;y++)for(let x=0;x<9*rs;x++){const dx=x-4.5*rs,dy=y-4*rs;if(dx*dx/(20*rs*rs)+dy*dy/(14*rs*rs)<1)set(rx+x,ry-5*rs+y,y<2?P.stone[3]:y>3*rs?P.stone[2]:P.stone[0])}}
+  for(const [mx,my] of [[146,144],[204,144]]){rect(mx,my-3,1,3,[240,230,200]);rect(mx-1,my-5,3,2,[200,70,60]);set(mx,my-5,[255,230,220])}
+}
+
+/* ---------- Công trình trại ---------- */
+function drawTent(cx,base){const h=42;
+  for(let j=0;j<h;j++){const half=Math.round((j/h)*34);for(let x=-half;x<=half;x++){
+    const left=x<0;let col=left?hex('#dcc590'):hex('#b79d69');
+    if(hash(cx+x,base-h+j,40)>.9)col=mul(col,.94);
+    if(Math.abs(x)===half&&j>0)col=mul(col,.72);
+    if(j<3)col=mul(col,1.12);
+    if(Math.abs(Math.abs(x)-Math.round(half*.5))===0&&j>8)col=mul(col,.88);
+    set(cx+x,base-h+j,col)}}
+  // cửa lều
+  for(let j=14;j<h;j++){const half=Math.round(((j-14)/(h-14))*13+1);for(let x=-half;x<=half;x++){const edge=Math.abs(x)===half;set(cx+x,base-h+j,edge?hex('#6b5634'):hex('#2d2218'))}}
+  rect(cx-1,base-h-6,2,8,hex('#6e4a2e'));rect(cx+1,base-h-6,6,3,hex('#c24a3a'));rect(cx+1,base-h-3,4,1,hex('#8f3328'));
+  for(const s of [-1,1]){line(cx+s*28,base-9,cx+s*44,base-1,hex('#d9cba0'));rect(cx+s*44-1,base-4,2,5,hex('#6e4a2e'))}
+}
+function drawChest(x,base){rect(x,base-12,18,12,hex('#8a5a32'));rect(x,base-12,18,4,hex('#a8703c'));rect(x,base-8,18,1,hex('#5a3a20'));rect(x+7,base-9,4,5,hex('#d9b973'));rect(x,base-12,2,12,hex('#5a3a20'));rect(x+16,base-12,2,12,hex('#5a3a20'));rect(x+8,base-7,2,2,hex('#3a2a18'))}
+function drawLogSeat(x,base){rect(x,base-7,28,7,hex('#7a5430'));rect(x,base-7,28,2,hex('#a07848'));rect(x-1,base-6,3,5,hex('#d9b98a'));rect(x+26,base-6,3,5,hex('#d9b98a'));set(x+27,base-4,hex('#8a6a40'))}
+function drawLampPost(x,base){rect(x,base-44,3,44,hex('#5a3d26'));rect(x,base-44,1,44,hex('#7d5636'));rect(x-2,base-46,14,3,hex('#5a3d26'));rect(x+9,base-44,2,5,hex('#3a2a18'));rect(x+7,base-40,6,2,hex('#3a3228'));rect(x+7,base-30,6,2,hex('#3a3228'));
+  rect(x+6,base-40,1,10,hex('#3a3228'));rect(x+13,base-40,1,10,hex('#3a3228'))}
+function drawCampfireBase(x,base){for(let i=0;i<7;i++)rect(x-12+i*4,base-4+(i%2),4,4,i%2?P.stone[0]:P.stone[1]);
+  line(x-9,base-4,x+8,base-8,hex('#6a4a2e'));line(x-9,base-5,x+8,base-9,hex('#8a6240'));line(x+9,base-4,x-8,base-8,hex('#5a3d26'));line(x+9,base-5,x-8,base-9,hex('#7d5636'))}
+const CH={h:'#b5995a',H:'#d2b672',j:'#6b4f2c',k:'#8a7040',q:'#c08a62',s:'#efc29a',S:'#d09c74',e:'#2b2118',r:'#5a3a22',R:'#3f2816',t:'#e6dcb8',T:'#f7f0d6',u:'#b9ad84',g:'#8b5a35',G:'#6a4226',y:'#c9a15f',p:'#4b6a5b',P:'#38524a',b:'#3a2f2a',B:'#5a4a40'};
+const CHR=[
+".......hhhhh........","......hHHHHhh.......","......hHHHHHhh......",".....jjjjjjjjjj.....","...kkhhhhhhhhhhhk...","....kkkkkkkkkkkk....",
+"......rqqqqqqS......","......rsssssssS.....","......rssssessSs....","......rrsssssSS.....","......rrsssSSS......",".......rrSSSS.......",
+"....gggttttttt......","...gGGgtTTTtttu.....","...gGGgtTTTtttuuT...","...gGGgtTTttuuutT...","...gGGyyTTtttuuttt..","...gGGgtTttuuu..sss.",
+"....GGgttttuuu......","....GGgtttuuuu......",".....ggttttuuu......",".....jjjjjjjjj......",
+"......ppppppPP......","......ppppppPP......","......pppppPPP......","......pppppPPP......","......pppppPPP......","......ppppPPPP......","......ppppPPP.......",
+".....pppp.PPPP......",".....pppp.PPPP......",".....pppp.PPP.......",".....pppp.PPP.......",".....bbbb.bbbb......","....bbbbB.bbbbB.....","....bbbbbbbbbbb....."];
+function drawCharacter(ox,oy){CHR.forEach((row,j)=>{for(let i=0;i<20;i++){const ch=row[i];if(ch&&ch!=='.'&&CH[ch])set(ox+i,oy+j,hex(CH[ch]))}})}
+function drawFish(cx,cy,ang){const ca=Math.cos(ang),sa=Math.sin(ang);
+  for(let y=-8;y<=8;y++)for(let x=-14;x<=10;x++){const rx=x*ca+y*sa,ry=-x*sa+y*ca;let col=null;
+    if(rx*rx/64+ry*ry/11<1)col=ry>1.2?hex('#f6d9a8'):(ry<-1.6?hex('#c85f22'):hex('#e5812f'));
+    else if(rx<-7&&rx>-14&&Math.abs(ry)<(-7-rx)*.65+.5)col=hex('#b5521c');
+    if(col)set(cx+x,cy+y,col)}
+  const ex=Math.round(cx+5*ca),ey=Math.round(cy-5*sa*0+(-5)*sa*-1*0+(-5*sa));set(cx+Math.round(5*ca-(-1.2)*sa),cy+Math.round(5*sa+(-1.2)*ca),[20,16,12])}
+function bobberAndRod(){const hx=278,hy=125,tx=322,ty=88,bx=344,by=147;
+  line(hx,hy,tx,ty,hex('#7a5a38'));line(hx,hy-1,tx,ty-1,hex('#a07848'));
+  let px=tx,py=ty;for(let i=1;i<=28;i++){const t=i/28,x=tx+(bx-tx)*t,y=ty+(by-ty)*t+Math.sin(t*Math.PI)*14;line(px,py,x,y,[225,235,230]);px=x;py=y}
+  rect(bx-1,by-3,3,3,hex('#d9453a'));rect(bx-1,by,3,2,[245,245,240]);
+  for(let k=-1;k<=1;k+=2){for(let x=0;x<8;x++)set(bx+k*(4+x),WATER*T+1+(x>5?0:1),[230,248,255],1,.6-x*.05)}}
+function splash(cx){const y=WATER*T;
+  for(let k=0;k<9;k++){const a=-Math.PI*(.1+.8*hash(k,1,50)),sp=3+hash(k,2,50)*5;set(cx+Math.cos(a)*sp*2.2,y-4+Math.sin(a)*sp*1.8,[235,250,255])}
+  for(const rr of [7,13,19])for(let x=-rr;x<=rr;x++){const yy=Math.round(Math.sqrt(1-(x/rr)*(x/rr))*rr*.18);set(cx+x,y-yy,[210,240,255],1,.55);}}
+function drawBirds(){if(S.stars)return;for(const [x,y] of [[140,70],[154,78],[300,56]]){const c=S.sun&&S.sun.y>100?[60,30,50]:[40,50,70];set(x,y,c,0);set(x+1,y-1,c,0);set(x+2,y-1,c,0);set(x+3,y,c,0);set(x-1,y-1,c,0);set(x-2,y-1,c,0)}}
+
+/* ---------- Pha lê, nấm, đuốc trong hang ---------- */
+const emit=[];let crystals=[],mushrooms=[],torch=null;
+function scanCaves(){crystals=[];mushrooms=[];
+  for(let c=13;c<=17;c++){let first=-1,last=-1;for(let r=10;r<ROWS;r++)if(!tile[r][c]){if(first<0)first=r;last=r}else if(first>=0)break;
+    if(first>=0){const floor=(last+1)*T,ceil=first*T;
+      crystals.push({x:c*T+8,y:floor,h:10+Math.floor(hash(c,1,60)*12),dir:-1});if(hash(c,2,60)>.4)crystals.push({x:c*T+4,y:ceil,h:6+Math.floor(hash(c,3,60)*8),dir:1})}}
+  for(let c=3;c<=8;c++){let last=-1;for(let r=11;r<ROWS;r++)if(!tile[r][c])last=r;else if(last>=0)break;if(last>=0&&hash(c,4,61)>.35)mushrooms.push({x:c*T+8,y:(last+1)*T})}
+  torch={x:3*T+8+16*0,y:13*T+4}}
+function buildEmitters(){emit.length=0;
+  emit.push({x:244,y:138,c:[1,.62,.25],i:1,rad:90,k:.5});
+  emit.push({x:136,y:106,c:[1,.78,.38],i:.85,rad:70,k:.4});
+  const nightish=S.stars||S.sun&&S.sun.y>100;if(nightish)emit.push({x:190,y:128,c:[1,.7,.35],i:.6,rad:60,k:.35});
+  emit.push({x:torch.x,y:torch.y,c:[1,.7,.32],i:.95,rad:64,k:.45});
+  for(const cr of crystals)emit.push({x:cr.x,y:cr.y+cr.dir*(cr.h*.5),c:[.25,.9,.85],i:.55,rad:40,k:.35});
+  for(const m of mushrooms)emit.push({x:m.x,y:m.y-4,c:[.3,.5,1],i:.4,rad:26,k:.3});
+  if(S.stars)for(const f of fireflies)emit.push({x:f.x,y:f.y,c:[.8,1,.4],i:.5,rad:20,k:.35})}
+const fireflies=[[300,118],[356,104],[388,126],[420,112],[262,92],[440,98]].map(([x,y])=>({x,y}));
+function drawEmissive(){
+  // lửa trại
+  const fx=244,fb=144-6,flames=[[[0,0,7,12,'#d63a1c'],[0,-3,5,10,'#f07a22'],[0,-5,3,7,'#ffd24a'],[0,-6,1,4,'#fff6c0']],[[-6,2,3,6,'#d63a1c'],[-6,0,2,4,'#f07a22']],[[6,2,3,5,'#d63a1c'],[6,0,2,3,'#f07a22']]];
+  for(const f of flames)for(const [dx,dy,w,h,col] of f){for(let y=0;y<h;y++){const ww=Math.max(1,Math.round(w*(1-y/h*.9)));for(let x=-ww;x<=ww;x++)set(fx+dx+x,fb+dy-y,hex(col),0)}}
+  for(let i=0;i<7;i++)set(fx-10+hash(i,1,70)*20,fb-14-hash(i,2,70)*24,[255,200+hash(i,3,70)*50,90],0);
+  // đèn lồng
+  rect(137,102,6,8,hex('#ffd27a'),0);rect(138,103,4,6,hex('#fff2b8'),0);
+  // lều: cửa phát sáng khi tối
+  if(S.stars||S.sun&&S.sun.y>100){for(let j=18;j<42;j++){const half=Math.round(((j-14)/28)*13+1)-1;for(let x=-half;x<=half;x++)set(190+x,102+j,lerpC(hex('#7a4a22'),hex('#f0a850'),1-j/48),0)}}
+  // đuốc
+  rect(torch.x,torch.y-2,2,10,hex('#6e4a2e'),0);rect(torch.x-1,torch.y-7,4,5,hex('#f07a22'),0);rect(torch.x,torch.y-9,2,5,hex('#ffd24a'),0);set(torch.x,torch.y-10,hex('#fff6c0'),0);
+  // pha lê
+  const cc=[hex('#2a9c9a'),hex('#53e3d0'),hex('#a8fff2')];
+  for(const cr of crystals){for(let y=0;y<cr.h;y++){const w=Math.max(0,Math.round((1-y/cr.h)*4));for(let x=-w;x<=w;x++)set(cr.x+x,cr.y+cr.dir*y-(cr.dir<0?1:0),x<0?cc[1]:x===0?cc[2]:cc[0],0)}}
+  // nấm phát sáng
+  for(const m of mushrooms){rect(m.x,m.y-4,1,4,[190,210,255],0);rect(m.x-2,m.y-6,5,2,hex('#4f7bff'),0);set(m.x,m.y-6,[200,225,255],0);set(m.x-1,m.y-7,hex('#4f7bff'),0);set(m.x,m.y-7,hex('#4f7bff'),0);set(m.x+1,m.y-7,hex('#4f7bff'),0)}
+  // đom đóm
+  if(S.stars)for(const f of fireflies){set(f.x,f.y,[220,255,120],0);set(f.x+1,f.y,[200,240,100],0,.6)}
+}
+
+/* ---------- Ánh sáng theo ô ---------- */
+function computeLight(){
+  const lr=new Float32Array(COLS*ROWS),lg=new Float32Array(COLS*ROWS),lb=new Float32Array(COLS*ROWS);
+  const sky=S.light;const id=(c,r)=>r*COLS+c;
+  const put=(c,r,col,k)=>{if(c<0||r<0||c>=COLS||r>=ROWS)return;const i=id(c,r);lr[i]=Math.max(lr[i],col[0]*k);lg[i]=Math.max(lg[i],col[1]*k);lb[i]=Math.max(lb[i],col[2]*k)};
+  for(let c=0;c<COLS;c++){for(let r=0;r<ROWS;r++){if(tile[r][c]){put(c,r,sky,.97);break}put(c,r,sky,1)}}
+  for(const e of emit)put(Math.floor(e.x/T),Math.floor(e.y/T),e.c,e.i*1.1);
+  const dec=(c,r)=>tile[r][c]?.76:isWater(c,r)?.8:wall[r][c]?.82:.87;
+  for(let it=0;it<26;it++)for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const d=dec(c,r),i=id(c,r);
+    for(const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){const nc=c+dc,nr=r+dr;if(nc<0||nr<0||nc>=COLS||nr>=ROWS)continue;const j=id(nc,nr);
+      const a=lr[j]*d,b=lg[j]*d,e2=lb[j]*d;if(a>lr[i])lr[i]=a;if(b>lg[i])lg[i]=b;if(e2>lb[i])lb[i]=e2}}
+  return{lr,lg,lb}}
+function applyLighting(){const {lr,lg,lb}=computeLight();const amb=.035;
+  const samp=(arr,fx,fy)=>{const c0=Math.floor(fx),r0=Math.floor(fy),tx=fx-c0,ty=fy-r0;const g=(c,r)=>arr[Math.max(0,Math.min(ROWS-1,r))*COLS+Math.max(0,Math.min(COLS-1,c))];
+    return(g(c0,r0)*(1-tx)+g(c0+1,r0)*tx)*(1-ty)+(g(c0,r0+1)*(1-tx)+g(c0+1,r0+1)*tx)*ty};
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!LIT[i])continue;const fx=x/T-.5,fy=y/T-.5;
+    R[i]*=Math.max(amb,Math.min(1.15,samp(lr,fx,fy)));G[i]*=Math.max(amb,Math.min(1.15,samp(lg,fx,fy)));B[i]*=Math.max(amb*1.4,Math.min(1.15,samp(lb,fx,fy)))}
+  for(const e of emit){const k=e.k*S.bloom;const rr=e.rad;for(let y=-rr;y<=rr;y++)for(let x=-rr;x<=rr;x++){const d=Math.hypot(x,y);if(d>=rr)continue;const X=Math.round(e.x+x),Y=Math.round(e.y+y);if(X<0||Y<0||X>=W||Y>=H)continue;
+    const a=Math.pow(1-d/rr,2.2)*k,i=Y*W+X;R[i]+=e.c[0]*255*a;G[i]+=e.c[1]*255*a;B[i]+=e.c[2]*255*a}}}
+
+/* ---------- Dựng cảnh ---------- */
+function flush(){const d=img.data;for(let i=0;i<W*H;i++){d[i*4]=R[i];d[i*4+1]=G[i];d[i*4+2]=B[i];d[i*4+3]=255}ctx.putImageData(img,0,0)}
+let state={time:'day',light:true,grid:false};
+function render(){
+  S=TIMES[state.time];LIT.fill(0);scanCaves();
+  drawBackdrop();drawWalls();drawTiles();drawWater();
+  drawTree(26,groundY(26)+2,92,1,34);drawTree(108,groundY(108)+2,100,2,38);drawTree(452,groundY(452)+2,112,3,42);
+  drawDecor();drawLampPost(130,144);drawChest(146,144);drawTent(190,144);drawCampfireBase(244,144);drawLogSeat(212,144);
+  drawCharacter(262,108);bobberAndRod();splash(372);drawFish(372,112,-.7);drawBirds();
+  buildEmitters();
+  if(state.light)applyLighting();
+  drawEmissive();
+  flush();
+  if(state.grid){ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<=W;x+=T){ctx.moveTo(x+.5,0);ctx.lineTo(x+.5,H)}for(let y=0;y<=H;y+=T){ctx.moveTo(0,y+.5);ctx.lineTo(W,y+.5)}ctx.stroke()}
+}
+function fit(){const avail=Math.min(window.innerWidth-46,1500);const s=Math.max(1,Math.floor(avail/W));cv.style.width=(avail<W*2?avail:W*s)+'px';cv.style.height='auto'}
+document.getElementById('bar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.time){state.time=b.dataset.time;document.querySelectorAll('[data-time]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))}
+  else if(b.id==='tLight'){state.light=!state.light;b.setAttribute('aria-pressed',String(state.light))}
+  else if(b.id==='tGrid'){state.grid=!state.grid;b.setAttribute('aria-pressed',String(state.grid))}
+  render()});
+window.addEventListener('resize',fit);
+const q=new URLSearchParams(location.search);if(q.get('t')&&TIMES[q.get('t')])state.time=q.get('t');
+if(q.get('grid')==='1')state.grid=true;if(q.get('light')==='0')state.light=false;
+document.querySelectorAll('[data-time]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.time===state.time)));
+document.getElementById('tLight').setAttribute('aria-pressed',String(state.light));document.getElementById('tGrid').setAttribute('aria-pressed',String(state.grid));
+fit();render();
+</script>
+</body>
+</html>

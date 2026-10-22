@@ -1,0 +1,202 @@
+/* Paper screens inside a timber frame. */
+#welcome {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #29453277;
+  z-index: 5;
+}
+article,
+dialog {
+  border: 4px solid var(--ink);
+  outline: 3px solid var(--wood);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow:
+    8px 8px 0 #142e2677,
+    inset 0 0 0 3px #f5e8c3;
+  border-radius: 0;
+}
+article {
+  width: min(26.25rem, calc(100vw - 2.375rem));
+  padding: 1.625rem 2rem;
+  text-align: center;
+  margin: 1rem;
+}
+article small {
+  font-size: 0.625rem;
+}
+article p {
+  font-size: 0.875rem;
+}
+#start {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+#welcome-settings {
+  margin-top: 0.5625rem;
+}
+.forest-crest {
+  display: grid;
+  place-items: center;
+  width: 4.25rem;
+  height: 3.75rem;
+  margin: 1.25rem auto 0.75rem;
+  color: #415f44;
+}
+.forest-crest .pixel-icon {
+  width: 3.625rem;
+  height: 3.625rem;
+}
+dialog {
+  padding: 0;
+  width: min(27.5rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2.125rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #70805d #ddd0a6;
+}
+dialog::backdrop {
+  background: #192d27aa;
+}
+.dialog-content {
+  padding: 1.5rem;
+  text-align: center;
+}
+.dialog-content > .primary {
+  width: 100%;
+  margin-top: 1rem;
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+  padding-bottom: 0.9375rem;
+  border-bottom: 2px solid #9eaa7c;
+  margin-bottom: 1rem;
+}
+.dialog-heading small {
+  font-size: 0.625rem;
+}
+.icon-button {
+  min-width: 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.375rem;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.pause-emblem {
+  display: grid;
+  place-items: center;
+  width: 3.375rem;
+  height: 3.375rem;
+  border: var(--border);
+  background: #b5c390;
+  color: var(--ink);
+  margin: 1.125rem auto;
+}
+.pause-emblem .pixel-icon {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+.dialog-actions {
+  display: flex;
+  gap: 0.625rem;
+  margin-top: 0.75rem;
+}
+.dialog-actions button {
+  flex: 1;
+  font-size: 0.75rem;
+}
+.settings-intro {
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.9375rem;
+  padding: 1.25rem 0;
+  border-bottom: 2px solid #a6b087;
+  text-align: left;
+}
+.setting-row label,
+.quality-setting label {
+  font-size: 1rem;
+  font-weight: 900;
+}
+.setting-row p,
+.quality-setting p {
+  font-size: 0.8125rem;
+  margin: 0.375rem 0 0;
+}
+.setting-row button {
+  flex-shrink: 0;
+}
+.quality-setting {
+  padding: 0.5rem 0 1.25rem;
+  text-align: left;
+  border-bottom: 2px solid #a6b087;
+}
+.quality-options {
+  display: flex;
+  gap: 0.625rem;
+  margin-top: 0.875rem;
+}
+.quality-options button {
+  flex: 1;
+}
+button[aria-pressed='true'] {
+  background: #5c794b;
+  color: #fff1c6;
+  box-shadow:
+    inset 0 3px #839963,
+    inset 0 -4px #3c5838,
+    3px 3px 0 #263d31;
+}
+
+#activity-body {
+  display: grid;
+  gap: 0.65rem;
+  text-align: left;
+}
+.trade-tabs,
+.trade-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.trade-row {
+  padding: 0.6rem;
+  border: 2px solid #9eaa7c;
+}
+.trade-row b {
+  flex: 1 1 100%;
+}
+
+.chest-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.chest-items {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.chest-columns button {
+  width: 100%;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+#hud-time {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}

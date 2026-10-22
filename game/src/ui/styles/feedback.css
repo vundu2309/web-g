@@ -1,0 +1,19 @@
+#toast {
+  position: fixed;
+  left: 50%;
+  top: 6.25rem;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(32.5rem, calc(100vw - 2rem));
+  padding: 0.75rem 1.125rem;
+  border: var(--border);
+  box-shadow: 4px 4px 0 #213c2b;
+  background: #f1e2b9;
+  color: #304c35;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.5;
+  text-align: center;
+  z-index: 4;
+  pointer-events: none;
+}

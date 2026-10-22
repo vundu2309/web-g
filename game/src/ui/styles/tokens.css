@@ -1,0 +1,13 @@
+:root {
+  font-size: 16px;
+  --ink: #263d31;
+  --pine: #415f44;
+  --moss: #6c8656;
+  --cream: #f0e4be;
+  --paper: #ddd0a6;
+  --wood: #9d784b;
+  --gold: #d9b973;
+  --border: 3px solid var(--ink);
+  --edge: inset 0 3px #fff3cf55, inset 0 -4px #263d3133, 4px 4px 0 #1a3026;
+  --font: Nunito, system-ui, sans-serif;
+}

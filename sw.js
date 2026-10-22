@@ -1,4 +1,4 @@
-const CACHE="pixel-forest-phaser-4e1c4d6f27a3",FILES=["./assets/index-ClclZXZy.js","./assets/index-FMQiOYcF.css","./assets/index.esm-BNsA8-o2.js","./fonts/OFL-Nunito.txt","./fonts/nunito-latin.woff2","./fonts/nunito-vietnamese.woff2","./icon-192.png","./icon-512.png","./index.html","./manifest.webmanifest"];
+const CACHE="pixel-forest-phaser-16f4028a524c",FILES=["./assets/index-BfF1o_5M.js","./assets/index-CDdASCEs.css","./assets/index.esm-BNsA8-o2.js","./fonts/OFL-Nunito.txt","./fonts/nunito-latin.woff2","./fonts/nunito-vietnamese.woff2","./icon-192.png","./icon-512.png","./index.html","./manifest.webmanifest"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pixel-forest-phaser-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{const url=new URL(e.request.url);if(url.origin!==location.origin||!url.href.startsWith(self.registration.scope)||e.request.method!=='GET'||url.pathname.endsWith('.mp3'))return;

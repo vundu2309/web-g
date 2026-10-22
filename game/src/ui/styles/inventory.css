@@ -1,0 +1,200 @@
+.camp-dialog {
+  width: min(41.875rem, calc(100vw - 2rem));
+}
+.camp-dialog .dialog-content {
+  text-align: left;
+}
+.camp-dialog p {
+  font-size: 0.8125rem;
+}
+.wardrobe {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  background: #b0bf91;
+  border: 2px solid #76875f;
+  box-shadow: inset 3px 3px 0 #879c75;
+  padding: 0.75rem 1.125rem;
+}
+.wardrobe img {
+  width: 4.5rem;
+  height: 6rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.wardrobe h3 {
+  margin-bottom: 0.3125rem;
+}
+.wardrobe p {
+  margin-bottom: 0;
+}
+.gear-slot h3 {
+  margin: 1.125rem 0 0.5rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.0625rem;
+}
+.gear-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5625rem;
+}
+.gear-options button {
+  display: grid;
+  grid-template-columns: 1.875rem 1fr;
+  align-items: center;
+  gap: 0.1875rem 0.5rem;
+  text-align: left;
+  min-height: 4.1875rem;
+  background: #ede1bc;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 800;
+  padding: 0.625rem;
+  box-shadow:
+    inset 0 3px #fff1cb,
+    inset 0 -3px #c5b17f;
+}
+.gear-options button[aria-pressed='true'] {
+  background: #637e4f;
+  color: #fff2ca;
+  border-color: #355538;
+  box-shadow:
+    inset 0 3px #8d9f6a,
+    inset 0 -3px #46613e;
+}
+.gear-options i {
+  display: block;
+  width: 1.5625rem;
+  height: 1.6875rem;
+  grid-row: span 2;
+  background: var(--swatch);
+  border: 2px solid #354a35;
+  box-shadow: inset 2px 2px 0 #ffffff33;
+}
+.gear-options small {
+  font-size: 0.6875rem;
+  letter-spacing: 0;
+  color: #65774f;
+}
+.gear-options [aria-pressed='true'] small {
+  color: #e7e3ba;
+}
+.gear-hat {
+  clip-path: polygon(15% 0, 85% 0, 85% 60%, 100% 60%, 100% 85%, 0 85%, 0 60%, 15% 60%);
+}
+.gear-shirt {
+  clip-path: polygon(0 10%, 30% 0, 70% 0, 100% 10%, 100% 45%, 80% 45%, 80% 100%, 20% 100%, 20% 45%, 0 45%);
+}
+.gear-pants {
+  clip-path: polygon(15% 0, 85% 0, 95% 100%, 55% 100%, 50% 45%, 45% 100%, 5% 100%);
+}
+.gear-backpack {
+  clip-path: polygon(20% 0, 80% 0, 80% 15%, 100% 15%, 100% 100%, 0 100%, 0 15%, 20% 15%);
+}
+.fish-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  border-top: 2px solid #9fab7e;
+  padding-top: 1rem;
+  margin-top: 1.5rem;
+}
+.fish-heading h3 {
+  margin: 0;
+}
+.fish-heading span {
+  font-size: 0.75rem;
+  color: #5c704c;
+}
+#fish-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5625rem;
+  margin: 0.75rem 0;
+}
+.fish-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.625rem;
+  border: 2px solid #abb48a;
+  background: #d7cfab;
+  color: #6d7d61;
+  min-height: 4.0625rem;
+}
+.fish-entry.caught {
+  background: #eee3bd;
+  border-color: #8e9f70;
+  color: var(--ink);
+}
+.fish-entry strong {
+  display: block;
+  font-size: 0.8125rem;
+}
+.fish-entry small {
+  display: block;
+  font-size: 0.6875rem;
+  letter-spacing: 0;
+  line-height: 1.4;
+  color: #61734f;
+  margin-top: 0.25rem;
+}
+.fish-entry b {
+  margin-left: auto;
+  color: #536c3f;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.fish-icon {
+  color: var(--fish);
+  flex-shrink: 0;
+}
+.fish-icon .pixel-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.recipe {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  text-align: left;
+  width: 100%;
+  margin: 0.75rem 0;
+  background: #ede0b7;
+  color: var(--ink);
+  padding: 0.75rem;
+  box-shadow:
+    inset 0 3px #fff0c8,
+    inset 0 -4px #c1ad7a,
+    3px 3px 0 #263d31;
+}
+.recipe:hover {
+  background: #f5e9c7;
+}
+.recipe img {
+  width: 5.5rem;
+  height: 4.0625rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #b2c193;
+  border: 2px solid #84956d;
+}
+.recipe strong {
+  font-size: 1.0625rem;
+}
+.recipe p {
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+}
+.recipe small {
+  letter-spacing: 0;
+  color: #637549;
+}
+.recipe > span {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #5c7348;
+}

@@ -1,0 +1,26 @@
+import type {StorageItem} from './chest.ts';
+import type {RodId} from '../data/rods.ts';
+import type {BuildingKind, FishId, MealId, Slot} from '../data/catalog.ts';
+export type Catch = {id: FishId; length: number};
+export type Food = Catch & {meal: MealId};
+export type Building = {id: string; kind: BuildingKind; x: number};
+export type Save = {
+  version: 2;
+  rod: RodId;
+  ownedRods: RodId[];
+  easyFishing: boolean;
+  x: number;
+  wood: number;
+  stone: number;
+  coin: number;
+  time: number;
+  chests: Record<string, StorageItem[]>;
+  equipped: Record<Slot, string>;
+  owned: string[];
+  fish: Partial<Record<FishId, {count: number; largest: number}>>;
+  fishBag: Catch[];
+  food: Food[];
+  speedBuff: number;
+  buildings: Building[];
+  harvested: string[];
+};
