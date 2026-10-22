@@ -23,6 +23,7 @@ class Forest extends Phaser.Scene{
  djTime=0;best=0;shieldFlash=0;shieldBurst=0;accumulator=0;audio!:DJAudio;
  quality:Quality=START_QUALITY;particles:Particle[]=[];labels:FloatLabel[]=[];fog:Phaser.GameObjects.TileSprite[]=[];
  feedback!:Phaser.GameObjects.Graphics;beams!:Phaser.GameObjects.Graphics;playerShadow!:Phaser.GameObjects.Image;
+ keys=new Set<string>();touchDirections=new Map<number,number>();dropX=600;
  landing=0;pickupFlash=0;entryPulse=0;trailTime=0;wasGrounded=false;
  constructor(){super('forest')}
  texture(name:string,w:number,h:number,draw:(ctx:CanvasRenderingContext2D)=>void,smooth=false){
@@ -62,7 +63,7 @@ class Forest extends Phaser.Scene{
   this.beams=this.add.graphics().setDepth(16);
   this.playerGlow=this.add.image(122,276,'light-aura').setDisplaySize(88,88).setDepth(18).setVisible(false);
   this.player=this.physics.add.image(122,300,'player-atlas','run0').setDisplaySize(48,64).setOrigin(.5,1).setDepth(20);
-  this.player.setGravityY(2088).setMaxVelocity(0,900);const body=this.player.body as Phaser.Physics.Arcade.Body;body.setSize(48,88);body.setOffset(24,40);
+  this.physics.world.setBounds(24,0,752,301);this.player.setCollideWorldBounds(true).setGravityY(2088).setMaxVelocity(240,900);const body=this.player.body as Phaser.Physics.Arcade.Body;body.setSize(48,88);body.setOffset(24,40);
   this.physics.add.collider(this.player,floor);this.physics.add.collider(this.obstacles,floor);
   this.physics.add.overlap(this.player,this.items,(_p,o)=>this.pickup(o as Item));
   this.physics.add.overlap(this.player,this.obstacles,(_p,o)=>this.collide(o as Item));
@@ -77,13 +78,23 @@ class Forest extends Phaser.Scene{
   this.feedback=this.add.graphics().setDepth(36);
   this.applyQuality(this.quality,false);
   const keyboard=(event:KeyboardEvent)=>{
+   if(this.settingsMenu.open||this.pauseMenu.open){if(event.code!=='KeyP')return}
+   if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(event.code)){event.preventDefault();if(this.status==='play')this.keys.add(event.code);return}
    if(event.repeat||this.settingsMenu.open)return;
    if(event.code==='KeyP'){event.preventDefault();this.togglePause();return}
    if(this.pauseMenu.open)return;
-   if(event.code==='Space'||event.code==='ArrowUp'){event.preventDefault();this.jump()}
+   if(event.code==='Space'||event.code==='ArrowUp'||event.code==='KeyW'){event.preventDefault();this.jump()}
   };
   document.addEventListener('keydown',keyboard);
-  this.input.on('pointerdown',()=>this.jump());
+  const keyup=(event:KeyboardEvent)=>this.keys.delete(event.code);
+  const clearControls=()=>this.clearControls();
+  document.addEventListener('keyup',keyup);window.addEventListener('blur',clearControls);
+  for(const [id,direction] of [['left',-1],['right',1]] as const){
+   const button=$(id);
+   button.onpointerdown=event=>{event.preventDefault();if(this.status!=='play')return;button.setPointerCapture(event.pointerId);this.touchDirections.set(event.pointerId,direction)};
+   const release=(event:PointerEvent)=>this.touchDirections.delete(event.pointerId);
+   button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
+  }
   $('start').onclick=()=>this.start();$('jump').onpointerdown=event=>{event.preventDefault();this.jump()};$('jump').onclick=event=>{if(event.detail===0)this.jump()};$('pause').onclick=()=>this.togglePause();
   $('god').onclick=()=>{this.run.god=!this.run.god;this.refreshHUD()};
   $('music').onclick=()=>this.audio.toggle();
@@ -96,7 +107,7 @@ class Forest extends Phaser.Scene{
   $('fullscreen').onclick=()=>{try{if(this.scale.isFullscreen)this.scale.stopFullscreen();else this.scale.startFullscreen()}catch{$('fullscreen').textContent='⛶ Không hỗ trợ'}};
   this.scale.on('enterfullscreen',()=>{$('fullscreen').textContent='⛶ Thu nhỏ'});this.scale.on('leavefullscreen',()=>{$('fullscreen').textContent='⛶ Mở'});
   const visibility=()=>{if(document.hidden&&this.status==='play')this.togglePause()};document.addEventListener('visibilitychange',visibility);
-  this.events.once('shutdown',()=>{document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',keyboard);this.audio.sync(false)});
+  this.events.once('shutdown',()=>{document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',keyboard);document.removeEventListener('keyup',keyup);window.removeEventListener('blur',clearControls);this.audio.sync(false)});
   this.physics.pause();this.drawEffects();this.refreshHUD();
   if(import.meta.env.DEV)(window as unknown as {forest:Forest}).forest=this;
  }
@@ -135,6 +146,8 @@ class Forest extends Phaser.Scene{
   if(this.run.boost>0&&this.trailTime<=0){this.trailTime=this.quality==='high'?.05:.14;this.emit(this.player.x-10,this.player.y-20,0xffd98b,2,16,0)}
  }
  afterPhysics(_dt:number){
+  this.run.distance=Math.max(this.run.distance,Math.max(0,this.player.x-122));
+  this.playerShadow.setX(this.player.x);
   const grounded=(this.player.body as Phaser.Physics.Arcade.Body).blocked.down;
   if(grounded&&!this.wasGrounded){this.landing=.14;this.emit(this.player.x,299,0x94aaa3,8,45,45)}
   this.wasGrounded=grounded;
@@ -181,7 +194,9 @@ class Forest extends Phaser.Scene{
  }
  musicLabel(){const audio=this.audio;$('music').textContent=audio.failed?'Thử lại':audio.blocked&&audio.enabled?'Chạm để phát':audio.enabled?'Bật':'Tắt';$('music').setAttribute('aria-pressed',String(audio.enabled))}
  syncAudio(){if(this.status==='pause'){this.audio.pause();return}this.audio.sync(this.status==='play'&&this.run.shield>0)}
+ clearControls(){this.keys.clear();this.touchDirections.clear();this.player?.setVelocityX(0)}
  start(){
+  this.clearControls();
   this.settingsMenu.close();this.pauseMenu.close();this.clearFeedback();this.audio.unlock();this.run=newRun(this.run.god);this.accumulator=0;this.cooldown=1.8;this.windup=0;this.release=0;this.itemTime=0;this.spawnsUntilPower=3;this.nextSpecial='dj';this.djTime=0;this.shieldFlash=this.shieldBurst=0;this.landing=this.pickupFlash=this.entryPulse=this.trailTime=0;this.wasGrounded=false;
   this.items.clear(true,true);this.obstacles.clear(true,true);this.player.setPosition(122,300).setVelocity(0).setFrame('run0');
   this.performer.setPosition(572,-115).setVisible(false);this.djGlow.setVisible(false);this.fx.clear();
@@ -189,7 +204,7 @@ class Forest extends Phaser.Scene{
  }
  jump(){if(this.status==='ready'||this.status==='over'){this.start();return}if(this.status==='play'&&(this.player.body as Phaser.Physics.Arcade.Body).blocked.down)this.player.setVelocityY(-720)}
  togglePause(){
-  if(this.status==='play'){this.status='pause';this.physics.pause();$('pause').textContent='▶ Tiếp tục'}
+  if(this.status==='play'){this.clearControls();this.status='pause';this.physics.pause();$('pause').textContent='▶ Tiếp tục'}
   else if(this.status==='pause'){this.status='play';this.accumulator=0;this.physics.resume();$('pause').textContent='Ⅱ Tạm dừng'}
   this.syncAudio();this.syncPauseMenu();this.refreshHUD();
  }
@@ -219,11 +234,12 @@ class Forest extends Phaser.Scene{
   $('welcome').hidden=false;$('intro-title').textContent='Một bước nghỉ chân.';$('intro-message').textContent='Bạn đạt '+score+' điểm. Rừng vẫn còn nhiều điều để khám phá!';$('start').textContent='Chơi lại →';this.drawEffects();this.refreshHUD();
  }
  spawnBaby(){
-  const o=this.obstacles.create(742,270,'baby') as Item;o.setDisplaySize(26,27).setOrigin(0,0).setGravityY(864).setBounce(0).setDepth(19);
+  const o=this.obstacles.create(this.dropX,274,'baby') as Item;o.setDisplaySize(26,27).setOrigin(0,0).setGravityY(864).setBounce(0).setDepth(19);
   (o.body as Phaser.Physics.Arcade.Body).setSize(46,48);
  }
  spawnItem(kind:'light'|'dj'|'power'){
-  const o=this.items.create(830,kind==='light'?230:280,kind) as Item;o.kind=kind;o.baseY=o.y;o.phase=this.run.time;
+  if(this.items.countActive()>=12)(this.items.getFirstAlive() as Item)?.destroy();
+  const o=this.items.create(65+Math.random()*620,kind==='light'?230:280,kind) as Item;o.kind=kind;o.baseY=o.y;o.phase=this.run.time;
   o.setDisplaySize(kind==='light'?20:34,kind==='light'?15:38).setDepth(19);
   o.halo=this.add.image(o.x,o.y,kind==='light'?'light-aura':'dj-aura').setDisplaySize(kind==='light'?34:62,kind==='light'?34:62).setTint(kind==='dj'?0x99dfff:0xffe6a2).setAlpha(.6).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
   o.once('destroy',()=>o.halo?.destroy());
@@ -239,15 +255,20 @@ class Forest extends Phaser.Scene{
   if(this.status==='play'){this.drawEffects();this.refreshHUD()}
  }
  simulate(dt:number){
-  const speed=204+Math.min(this.run.distance/4000,3)*60;tick(this.run,dt,speed);
+  const keyboardDirection=Number(this.keys.has('ArrowRight')||this.keys.has('KeyD'))-Number(this.keys.has('ArrowLeft')||this.keys.has('KeyA'));
+  const touchDirection=[...this.touchDirections.values()].reduce((sum,value)=>sum+value,0);
+  const direction=Math.sign(keyboardDirection+touchDirection);
+  const speed=direction*240;
+  this.player.setVelocityX(speed);if(direction)this.player.setFlipX(direction<0);
+  tick(this.run,dt,0);
   if(this.run.shield>0)this.djTime+=dt;
   this.updateFeedback(dt);
   this.shieldFlash=Math.max(0,this.shieldFlash-dt);this.shieldBurst=Math.max(0,this.shieldBurst-dt);this.release=Math.max(0,this.release-dt);
-  this.layers.forEach((layer,i)=>layer.tilePositionX=this.run.distance*forestLayers[i].speed*2);
+
   this.fog.forEach((fog,i)=>fog.tilePositionX=this.run.time*(i+1)*5);
-  this.ground.tilePositionX=this.run.distance*2;this.ferns.tilePositionX=this.run.distance*1.6;
+
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(this.windup===0){this.spawnBaby();this.release=.3;this.cooldown=dropDelay(this.run.time)}}
-  else {this.cooldown-=dt;if(this.cooldown<=0)this.windup=.6}
+  else {this.cooldown-=dt;if(this.cooldown<=0){this.windup=.9;const occupied=(this.obstacles.getChildren() as Item[]).map(o=>o.x);const choices=Array.from({length:9},(_,i)=>110+i*65).filter(x=>Math.abs(x-this.player.x)>65&&occupied.every(other=>Math.abs(other-x)>38));if(this.obstacles.countActive()<8&&choices.length)this.dropX=Phaser.Utils.Array.GetRandom(choices);else {this.windup=0;this.cooldown=1}}}
   this.enemy.setFrame(this.release>0?'release':this.windup>0?'hold':'idle');this.heldBaby.setVisible(this.windup>0);
   this.itemTime-=dt;
   if(this.itemTime<=0){
@@ -256,9 +277,9 @@ class Forest extends Phaser.Scene{
    if(special){this.nextSpecial=this.nextSpecial==='dj'?'power':'dj';this.spawnsUntilPower=5+Math.floor(Math.random()*3)}
    this.itemTime=(65+Math.random()*45)/60;
   }
-  for(const group of [this.items,this.obstacles])for(const object of [...group.getChildren()] as Item[]){object.setVelocityX(-speed);if(object.x< -60)object.destroy()}
+  for(const group of [this.items,this.obstacles])for(const object of group.getChildren() as Item[])object.setVelocityX(0);
   const body=this.player.body as Phaser.Physics.Arcade.Body,onGround=body.blocked.down&&body.velocity.y>=0;
-  this.player.setFrame(!onGround?(body.velocity.y<0?'jump':'fall'):this.landing>0?'land':this.pickupFlash>0?'pickup':'run'+Math.floor(this.run.time*14)%8);
+  this.player.setFrame(!onGround?(body.velocity.y<0?'jump':'fall'):this.landing>0?'land':this.pickupFlash>0?'pickup':speed===0?'run0':'run'+Math.floor(this.run.time*14)%8);
   if(this.run.shield>0){
    const progress=Math.min(1,this.djTime/1.2),ease=1-(1-progress)**3;
    this.performer.setPosition(572,-115+ease*197+Math.sin(this.djTime*2.5)*3*progress);
@@ -285,7 +306,7 @@ class Forest extends Phaser.Scene{
  drawEffects(){
   const f=this.fx,a=this.ambient;f.clear();a.clear();const x=this.player.x,y=this.player.y-32,t=this.run.time;
   for(let i=0;i<(this.quality==='high'?24:9);i++){a.fillStyle(0xc9d6d5,.7);a.fillRect(((i*113-t*15)%800+800)%800,70+(i*43)%210+Math.sin(t*2+i)*6,3,3)}
-  if(this.windup>0){f.lineStyle(1,0xffdd99,.8);f.strokeEllipse(754,297,30,4);f.fillStyle(0xffdfa4,.65+.25*Math.sin(t*25));f.fillTriangle(751,270,757,270,754,277)}
+  if(this.windup>0){f.lineStyle(1,0xffdd99,.8);f.strokeEllipse(this.dropX+13,297,34,6);f.fillStyle(0xffdfa4,.65+.25*Math.sin(t*25));f.fillTriangle(this.dropX+9,260,this.dropX+17,260,this.dropX+13,268)}
   this.playerGlow.setVisible(this.run.boost>0).setPosition(x,y).setAlpha(1);
   this.goldenScene.setVisible(this.run.shield>0).setAlpha(Math.min(1,this.djTime/.6));this.water.setVisible(this.run.shield>0).setPosition(x,y);
   if(this.run.boost>0)for(let i=0;i<(this.quality==='high'?14:7);i++){

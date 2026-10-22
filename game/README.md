@@ -14,8 +14,8 @@ npm run preview
 ```
 
 - Game phát triển: http://localhost:5173.
-- `Space` / `↑` hoặc nút Nhảy để nhảy; `P` tạm dừng.
-- Trong lúc chơi chỉ có Nhảy, Tạm dừng và Cài đặt. Âm nhạc, mức đồ họa, God mode và toàn màn hình nằm trong Cài đặt.
+- `←` / `→` hoặc `A` / `D` để di chuyển; `Space` / `↑` / `W` để nhảy; `P` tạm dừng. Điện thoại giữ nút trái/phải và có thể nhấn Nhảy đồng thời.
+- Trong lúc chơi có Trái, Phải, Nhảy, Tạm dừng và Cài đặt. Âm nhạc, mức đồ họa, God mode và toàn màn hình nằm trong Cài đặt.
 - Mở Cài đặt trong game tự tạm dừng. Đóng Cài đặt trở về màn hình pause; bấm Tiếp tục hoặc Esc/P để chạy tiếp.
 - Cây nền có 4 lớp cao lần lượt 112/172/235/289 đơn vị, đều neo chân ở mặt đất; lớp xa nhỏ/nhạt và cuộn chậm hơn.
 
@@ -33,7 +33,7 @@ Hiệu ứng đã đối chiếu bản Canvas: gradient vàng toàn cảnh, grad
 
 Manifest, icon và service worker có trong build production. Phần game được cache để chơi offline sau lần tải đầu; file nhạc không precache. Âm nhạc ở `public/assets/audio/song-gio.mp3`, khoảng 9,8 MiB, chỉ tải sau tương tác. Cần tải file này cùng bản build nếu muốn phát online.
 
-JS build khoảng 1,25 MB thô / 346 KB gzip, chưa tính nhạc. Chưa đo pin/FPS hoặc kiểm tra cài đặt trên điện thoại thật. Bản Phaser chính đã triển khai tại thư mục gốc của nhánh main; mã nguồn nằm trong game/.
+JS build khoảng 1,25 MB thô / 346 KB gzip, chưa tính nhạc. Chưa đo pin/FPS hoặc kiểm tra cài đặt trên điện thoại thật. Bản Phaser được phát hành trên GitHub Pages; bản build nằm ở gốc repository, mã nguồn ở `game/` trên GitHub.
 
 ## Sân khấu giữa rừng đêm
 
@@ -44,3 +44,7 @@ JS build khoảng 1,25 MB thô / 346 KB gzip, chưa tính nhạc. Chưa đo pin/
 - Đẹp: render 1600×720, có sương và đầy đủ hạt sáng. Tiết kiệm: render 800×360, tắt sương, giảm hạt. Thiết bị cảm ứng mặc định Tiết kiệm nếu chưa có lựa chọn lưu.
 - Hiệu ứng mô phỏng giới hạn 96 hạt ở mức Đẹp / 32 ở Tiết kiệm, tối đa 6 thông báo điểm; trạng thái này đóng băng khi pause và dọn khi restart.
 - Không thêm thư viện đồ họa hoặc ảnh tải ngoài. Hình và sprite được cache; chưa đo hiệu năng/pin trên thiết bị thật.
+
+## Di chuyển chủ động
+
+Nhân vật chỉ di chuyển khi giữ điều khiển, giới hạn trong màn chơi. Nền và chướng ngại không tự trượt. Enemy báo vị trí trước khi thả; vật cản rơi xuống rồi đứng yên, tối đa 8 vật cản. Vật phẩm xuất hiện trong vùng có thể tiếp cận, tối đa 12. Điểm quãng đường chỉ tính theo vị trí xa nhất đã tới, không tăng khi đứng yên hoặc đi qua lại. Pause, mất focus và chơi lại xóa điều khiển đang giữ.
