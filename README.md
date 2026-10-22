@@ -1,24 +1,9 @@
-# Pixel Forest
+# Pixel Forest — Trại bên hồ
 
-Game Phaser 3.90 với rừng đêm, DJ, khiên bảo vệ và nhạc.
+Game Phaser cắm trại, xây dựng và câu cá.
 
-Chơi tại https://vundu2309.github.io/web-g/
+Chơi: https://vundu2309.github.io/web-g/
 
-## Mã nguồn và phát hành
+Mã nguồn và hướng dẫn ở [game/README.md](game/README.md). Thư mục gốc là nội dung build để GitHub Pages phục vụ từ main / root.
 
-Mã nguồn ở `game/`. Thư mục gốc chứa nội dung build để GitHub Pages phục vụ từ nhánh `main`, thư mục `/ (root)`.
-
-```sh
-cd game
-npm ci
-npm run dev
-npm test
-npm run test:e2e
-npm run build
-```
-
-Khi phát hành: chép toàn bộ nội dung `game/dist/` ra thư mục gốc repository rồi commit cùng mã nguồn. Giữ `.nojekyll`. Không chép source `game/index.html` ra gốc.
-
-Nhạc nằm ở `game/public/assets/audio/song-gio.mp3`, được build ra `assets/audio/song-gio.mp3`. Nhạc chỉ phát sau tương tác khi có hiệu ứng DJ và bật âm nhạc.
-
-Manifest và service worker hỗ trợ cài đặt và cache game offline; nhạc không được cache trước.
+Có 4 ô trang bị, kho đồ, 12 loài cá, 5 ao/hồ/suối và 4 loại công trình. Lưu tiến trình trên thiết bị; Firebase Core đã cấu hình, chưa đồng bộ cloud.

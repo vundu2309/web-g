@@ -6,7 +6,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build && node scripts/pwa.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --experimental-strip-types --test src/rules.test.ts",
+    "test": "node --experimental-strip-types --test src/camping.test.ts",
     "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {

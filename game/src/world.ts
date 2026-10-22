@@ -1,13 +1,20 @@
 import Phaser from 'phaser';
-import {paintForest,paintFerns} from './night-art';
+import type {Habitat} from './camping';
+import {paintFerns} from './night-art';
 export const WORLD_WIDTH=16000,WORLD_HEIGHT=900,SECTION=256;
-export const regions=[{x:0,name:'THUNG LŨNG ĐOM ĐÓM'},{x:3200,name:'RỪNG THÔNG SƯƠNG'},{x:6400,name:'THÁC NGÂN HÀ'},{x:9600,name:'ĐÈO TRĂNG'},{x:12800,name:'PHẾ TÍCH TRÊN MÂY'}];
+export const waters:{id:string;name:string;x:number;width:number;habitat:Habitat}[]=[{id:'pond',name:'Ao Sen',x:768,width:512,habitat:'pond'},{id:'lake',name:'Hồ Thông',x:3584,width:768,habitat:'lake'},{id:'river',name:'Suối Đá',x:6656,width:512,habitat:'river'},{id:'mirror',name:'Hồ Gương',x:9984,width:768,habitat:'lake'},{id:'spring',name:'Suối Trăng',x:13312,width:512,habitat:'river'}];
+export const resourceNodes=Array.from({length:72},(_,i)=>({id:'node-'+i,x:350+i*210,kind:i%3===0?'stone' as const:'wood' as const})).filter(n=>!waters.some(w=>n.x>w.x-90&&n.x<w.x+w.width+90));
+export function waterAt(x:number){return waters.find(w=>x>=w.x-60&&x<=w.x+w.width+60)}
+export const regions=[{x:0,name:'THUNG LŨNG AO SEN'},{x:3200,name:'RỪNG THÔNG SƯƠNG'},{x:6400,name:'THÁC NGÂN HÀ'},{x:9600,name:'ĐÈO TRĂNG'},{x:12800,name:'PHẾ TÍCH TRÊN MÂY'}];
 export function groundAt(x:number){
+ const water=waters.find(w=>x>=w.x-256&&x<w.x+w.width+256);if(water)x=water.x;
  const column=Math.floor(Math.max(0,Math.min(WORLD_WIDTH-1,x))/SECTION);
  return 650-Math.round((Math.sin(column*.19)*65+column*3.1)/16)*16;
 }
 export function regionAt(x:number){return regions[Math.min(4,Math.floor(Math.max(0,x)/3200))]}
 export function buildWorld(scene:Phaser.Scene){
+ const mountains=scene.add.graphics().setDepth(0);
+ for(let x=0;x<WORLD_WIDTH;x+=800){const base=groundAt(x);mountains.fillStyle(0x789789,.45);mountains.fillPoints([{x:x-200,y:base},{x:x+130,y:base-350},{x:x+350,y:base-220},{x:x+570,y:base-410},{x:x+1000,y:base}],true);mountains.fillStyle(0xa6b6a1,.55);mountains.fillTriangle(x+130,base-350,x+85,base-305,x+175,base-305);}
  const platforms=scene.physics.add.staticGroup();
  for(let x=0;x<WORLD_WIDTH;x+=SECTION){const y=groundAt(x);const platform=scene.add.rectangle(x,y,SECTION,WORLD_HEIGHT-y,0,0).setOrigin(0);platforms.add(platform);}
  // Cache narrow chunks once; Phaser culls their draw calls outside the viewport.
@@ -20,11 +27,17 @@ export function buildWorld(scene:Phaser.Scene){
    c.fillStyle='#7e9b79';c.fillRect(local,y,SECTION,4);c.fillStyle='#476951';c.fillRect(local,y+4,SECTION,10);
    for(let i=0;i<160;i++){const px=local+(i*47)%SECTION,py=y+16+(i*31)%Math.max(1,WORLD_HEIGHT-y-20);c.fillStyle=i%7?'#486056':'#6c7870';c.fillRect(px,py,2+i%5,1+i%2);}
    const tx=local+55+(Math.sin(x*.03)*.5+.5)*100,scale=.63+(Math.sin(x*.071)*.5+.5)*.48;
-   c.save();c.translate(tx,groundAt(start+tx));
+   c.save();if(waterAt(x+128))c.globalAlpha=0; c.translate(tx,groundAt(start+tx));
    if(zone===1||zone===3){
     const height=160+scale*65;c.fillStyle='#263c42';c.fillRect(-4,-height,8,height);
     for(let branch=0;branch<5;branch++){const top=-height+branch*height*.14,w=22+branch*10;c.fillStyle=branch%2?'#355654':'#41665e';c.beginPath();c.moveTo(0,top-20);c.lineTo(-w,top+55);c.lineTo(w,top+55);c.closePath();c.fill();c.fillStyle='#688d78';c.fillRect(-w+8,top+53,w,2);}
-   }else{c.scale(scale,scale);c.translate(-108,-300);paintForest(c,2,216);}
+   }else{
+    c.scale(scale,scale);c.fillStyle='#4a6250';c.fillRect(-6,-174,12,174);c.fillStyle='#839174';c.fillRect(-4,-132,2,125);
+    for(let branch=0;branch<3;branch++){c.fillStyle='#4a6250';c.fillRect(branch%2?-23:0,-120-branch*17,24,4);}
+    const leafColors=['#4d755b','#618568','#789373'];
+    for(let crown=0;crown<3;crown++){const cx=(crown-1)*29,cy=-168+(crown%2)*24;c.fillStyle=leafColors[crown];c.beginPath();c.moveTo(cx-34,cy-20);c.lineTo(cx-20,cy-34);c.lineTo(cx+19,cy-32);c.lineTo(cx+36,cy-13);c.lineTo(cx+33,cy+20);c.lineTo(cx+12,cy+29);c.lineTo(cx-30,cy+22);c.closePath();c.fill();for(let j=0;j<24;j++){c.fillStyle=j%3?'#88a77c':'#a4ba8a';c.fillRect(cx-24+(j*17)%49,cy-23+(j*11)%42,2+j%3,1);}}
+    c.fillStyle='#6d825b';c.fillRect(-10,-4,23,4);
+   }
    c.restore();
    c.save();c.translate(local,y-20);paintFerns(c);c.restore();
    // Rounded boulders, moss, mushrooms and clumps of grass are scenery only.
@@ -42,8 +55,18 @@ export function buildWorld(scene:Phaser.Scene){
  scenery.fillStyle(0x8ac9d6,.38);scenery.fillRect(wx,wy-210,46,205);scenery.fillStyle(0xd3f2ec,.55);
  for(let i=0;i<8;i++)scenery.fillRect(wx+4+i*5,wy-200+(i%3)*8,2,180);
  scenery.fillStyle(0x89cfdd,.45);scenery.fillEllipse(wx+23,wy-5,150,15);
- // Campsites, trail markers and ancient stone arches provide distinct landmarks.
- for(const x of [1700,4800,10500,14500]){const y=groundAt(x);scenery.fillStyle(0x8f8470);scenery.fillRect(x,y-39,4,39);scenery.fillStyle(0xc5b88d);scenery.fillRect(x-12,y-40,43,12);scenery.fillStyle(0x627c70);scenery.fillRect(x+45,y-18,40,18);scenery.fillStyle(0xd6b98b);scenery.fillTriangle(x+40,y-18,x+65,y-46,x+90,y-18);}
+ // Lakes belong to the terrain itself. A timber crossing keeps the route traversable.
+ for(const lake of waters){
+  const y=groundAt(lake.x),x=lake.x,w=lake.width;
+  scenery.fillStyle(0x365f60);scenery.fillRoundedRect(x-12,y-7,w+24,69,18);
+  scenery.fillStyle(0x638f86);scenery.fillRoundedRect(x,y-3,w,52,14);
+  scenery.fillStyle(0x9ebdaf,.7);for(let i=0;i<18;i++)scenery.fillRect(x+15+i*(w-30)/18,y+8+(i%4)*11,12+i%3*8,1);
+  scenery.fillStyle(0x3f6d54);for(let i=0;i<6;i++)scenery.fillEllipse(x+35+i*w/7,y+26+(i%2)*18,18,5);
+  scenery.fillStyle(0x795e40);scenery.fillRect(x-14,y-2,w+28,5);scenery.fillStyle(0xb49b6b);
+  for(let i=0;i<w;i+=14)scenery.fillRect(x+i,y-4,11,4);
+  for(const bank of [x-18,x+w+12]){scenery.fillStyle(0x537d50);for(let i=0;i<6;i++){scenery.fillRect(bank+i*3-7,y-22-i%3*5,1,25+i%3*5);scenery.fillStyle(0xb5a775);scenery.fillRect(bank+i*3-7,y-26-i%3*5,2,5);scenery.fillStyle(0x537d50)}}
+  scene.add.text(x+18,y-50,lake.name+' · Câu cá [E]',{fontFamily:'monospace',fontSize:'10px',color:'#f2e8cb',backgroundColor:'#284b42dd',padding:{x:7,y:5}}).setDepth(12);
+ }
  const ax=13950,ay=groundAt(ax);scenery.fillStyle(0x73838a);scenery.fillRect(ax,ay-100,22,100);scenery.fillRect(ax+95,ay-100,22,100);scenery.fillRect(ax-6,ay-115,130,22);scenery.lineStyle(2,0xc2bda0,.6);scenery.strokeRect(ax+5,ay-90,12,60);scenery.strokeRect(ax+100,ay-90,12,60);
  for(const r of regions)scene.add.text(r.x+260,groundAt(r.x+260)-100,r.name,{fontFamily:'monospace',fontSize:'11px',color:'#dfdcc0',backgroundColor:'#142634aa',padding:{x:9,y:6}}).setDepth(12);
  return platforms;

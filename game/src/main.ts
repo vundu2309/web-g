@@ -1,352 +1,134 @@
 import Phaser from 'phaser';
 import './style.css';
-import {newRun,hit,firefly,tick,SHIELD_MAX} from './rules';
-import {DJAudio} from './audio';
 import {initFirebase} from './firebase';
-// @ts-expect-error Procedural pixel art cached as textures at scene creation.
-import {paint,paintEffect} from './art.js';
-import {paintPlayer,paintSky,paintForest,paintGround,paintFerns,paintFog,paintShadow,forestLayers} from './night-art';
-import {buildWorld,groundAt,regionAt,WORLD_WIDTH,WORLD_HEIGHT} from './world';
-type Quality='low'|'high';
-function initialQuality():Quality{try{const saved=localStorage.getItem('forest-quality');if(saved==='low'||saved==='high')return saved}catch{}return matchMedia('(pointer: coarse)').matches?'low':'high'}
-const START_QUALITY=initialQuality(),RENDER_SCALE=START_QUALITY==='low'?1:2,STEP=1/60;
-type Particle={x:number;y:number;vx:number;vy:number;life:number;max:number;color:number;size:number;gravity:number};
-type FloatLabel={view:Phaser.GameObjects.Text;life:number};
+import {buildWorld,groundAt,regionAt,waters,waterAt,resourceNodes,WORLD_WIDTH,WORLD_HEIGHT} from './world';
+import {gear,slots,fishSpecies,newSave,decodeSave,equip,rollFish,storeFish,craft,recipes,SAVE_KEY,type Save,type Slot,type BuildingKind} from './camping';
+import {paintCamper,paintBuilding} from './camp-art';
 const $=(id:string)=>document.getElementById(id)!;
-type Item=Phaser.Physics.Arcade.Image & {kind?:string;baseY?:number;phase?:number;halo?:Phaser.GameObjects.Image};
+type Quality='low'|'high';
+const qualityStart=():Quality=>{try{const q=localStorage.getItem('forest-quality');if(q==='low'||q==='high')return q}catch{}return matchMedia('(pointer:coarse)').matches?'low':'high'};
+const START_QUALITY=qualityStart(),SCALE=START_QUALITY==='high'?2:1,STEP=1/60;
+type Fishing={phase:'waiting'|'bite';remaining:number;waterId:string};
 class Forest extends Phaser.Scene{
- player!:Phaser.Physics.Arcade.Image;
- items!:Phaser.Physics.Arcade.Group;obstacles!:Phaser.Physics.Arcade.Group;
- run=newRun();status:'ready'|'play'|'pause'|'over'='ready';
- sky!:Phaser.GameObjects.Image;layers:Phaser.GameObjects.TileSprite[]=[];ground!:Phaser.GameObjects.TileSprite;ferns!:Phaser.GameObjects.TileSprite;
- ambient!:Phaser.GameObjects.Graphics;fx!:Phaser.GameObjects.Graphics;performer!:Phaser.GameObjects.Container;djSprite!:Phaser.GameObjects.Image;
- playerGlow!:Phaser.GameObjects.Image;djGlow!:Phaser.GameObjects.Image;goldenScene!:Phaser.GameObjects.Image;water!:Phaser.GameObjects.Image;djMotion!:Phaser.GameObjects.Graphics;
- djTime=0;best=0;shieldFlash=0;shieldBurst=0;accumulator=0;audio!:DJAudio;
- quality:Quality=START_QUALITY;particles:Particle[]=[];labels:FloatLabel[]=[];fog:Phaser.GameObjects.TileSprite[]=[];
- feedback!:Phaser.GameObjects.Graphics;beams!:Phaser.GameObjects.Graphics;playerShadow!:Phaser.GameObjects.Image;
- keys=new Set<string>();touchDirections=new Map<number,number>();
- landing=0;pickupFlash=0;entryPulse=0;trailTime=0;wasGrounded=false;
+ player!:Phaser.Physics.Arcade.Image;fx!:Phaser.GameObjects.Graphics;preview!:Phaser.GameObjects.Image;fishLabel!:Phaser.GameObjects.Text;
+ state:Save=newSave();status:'ready'|'play'|'pause'='ready';quality:Quality=START_QUALITY;
+ keys=new Set<string>();touchDirections=new Map<number,number>();fishing:Fishing|null=null;selected:BuildingKind|null=null;
+ clock=0;accumulator=0;saveTime=0;lastHud='';nodes=new Map<string,Phaser.GameObjects.Image>();structures:Phaser.GameObjects.Image[]=[];storageWarning=false;toastTimer=0;
  constructor(){super('forest')}
- texture(name:string,w:number,h:number,draw:(ctx:CanvasRenderingContext2D)=>void,smooth=false){
-  const texture=this.textures.createCanvas(name,w*2,h*2)!;texture.context.scale(2,2);draw(texture.context);
-  texture.refresh();texture.setFilter(smooth?Phaser.Textures.FilterMode.LINEAR:Phaser.Textures.FilterMode.NEAREST);
- }
  create(){
-  try{this.best=Number(localStorage.getItem('forest-best'))||0}catch{}
-  this.audio=new DJAudio(()=>this.musicLabel());
-  for(const [name,w,h]of [['baby',26,27],['dj',42,48],['power',34,48],['light',20,15]] as const)this.texture(name,w,h,ctx=>paint(ctx,name));
-  const playerFrames=[...Array.from({length:8},(_,i)=>'run'+i),'jump','fall','land','pickup'];
-  this.texture('player-atlas',48*playerFrames.length,64,ctx=>{
-   playerFrames.forEach((pose,i)=>{ctx.save();ctx.translate(i*48,0);paintPlayer(ctx,pose.startsWith('run')?'run':pose,i*Math.PI/4);ctx.restore()});
-  });
-  playerFrames.forEach((pose,i)=>this.textures.get('player-atlas').add(pose,0,i*96,0,96,128));
-  this.texture('performer0',170,100,ctx=>paint(ctx,'performer',0));
-  for(const [kind,w,h]of [['golden-scene',800,360],['water',72,72],['light-aura',88,88],['dj-aura',170,170]] as const)this.texture(kind,w,h,ctx=>paintEffect(ctx,kind),true);
-  this.texture('night-sky',800,360,paintSky,true);this.texture('mist',800,96,paintFog,true);this.texture('foot-shadow',64,12,paintShadow,true);
-  this.sky=this.add.image(0,0,'night-sky').setDisplaySize(800,360).setOrigin(0);
-  this.cameras.main.setBackgroundColor('#10152f');this.cameras.main.setZoom(RENDER_SCALE);this.cameras.main.setBounds(0,0,WORLD_WIDTH,WORLD_HEIGHT);this.cameras.main.centerOn(400,groundAt(122)-65);
-  for(let l=0;l<forestLayers.length;l++){
-   const width=forestLayers[l].spacing;this.texture('tree'+l,width,300,ctx=>paintForest(ctx,l,width));
-   this.layers.push(this.add.tileSprite(0,0,800,300,'tree'+l).setOrigin(0).setTileScale(.5));
-  }
-  this.texture('ground',800,60,paintGround);this.ground=this.add.tileSprite(0,299,800,61,'ground').setOrigin(0).setTileScale(.5).setVisible(false);
-  this.texture('ferns',890,20,paintFerns);this.ferns=this.add.tileSprite(0,280,800,20,'ferns').setOrigin(0).setTileScale(.5).setVisible(false);
-  this.fog=[this.add.tileSprite(0,178,800,96,'mist').setOrigin(0).setTileScale(.5).setDepth(2).setAlpha(.65),this.add.tileSprite(0,244,800,70,'mist').setOrigin(0).setTileScale(.5).setDepth(3).setAlpha(.35)];
-  this.goldenScene=this.add.image(0,0,'golden-scene').setOrigin(0).setDisplaySize(800,360).setDepth(14).setVisible(false);
-  this.ambient=this.add.graphics().setDepth(13);
-  this.items=this.physics.add.group({allowGravity:false});this.obstacles=this.physics.add.group();
+  try{this.state=decodeSave(localStorage.getItem(SAVE_KEY))}catch{}
+  this.cameras.main.setBackgroundColor('#afc1b0').setZoom(SCALE).setBounds(0,0,WORLD_WIDTH,WORLD_HEIGHT);
   const floor=buildWorld(this);
-  this.playerShadow=this.add.image(122,302,'foot-shadow').setDisplaySize(42,9).setDepth(15);
-
-  this.beams=this.add.graphics().setDepth(16);
-  this.playerGlow=this.add.image(122,276,'light-aura').setDisplaySize(88,88).setDepth(18).setVisible(false);
-  this.player=this.physics.add.image(122,groundAt(122)-1,'player-atlas','run0').setDisplaySize(48,64).setOrigin(.5,1).setDepth(20);
-  this.physics.world.setBounds(0,0,WORLD_WIDTH,WORLD_HEIGHT);this.player.setCollideWorldBounds(true).setGravityY(2088).setMaxVelocity(240,900);const body=this.player.body as Phaser.Physics.Arcade.Body;body.setSize(48,88);body.setOffset(24,40);
-  this.physics.add.collider(this.player,floor);
-  this.physics.add.overlap(this.player,this.items,(_p,o)=>this.pickup(o as Item));
-
-  this.water=this.add.image(122,276,'water').setDisplaySize(72,72).setDepth(24).setVisible(false);
-  this.fx=this.add.graphics().setDepth(25);
-  this.djGlow=this.add.image(570,-160,'dj-aura').setDisplaySize(170,170).setDepth(23).setVisible(false);
-  this.djSprite=this.add.image(0,-8,'performer0').setDisplaySize(170,100).setOrigin(.5,0);
-  this.djMotion=this.add.graphics();
-  this.performer=this.add.container(572,-115,[this.djSprite,this.djMotion]).setDepth(30).setVisible(false);
-  this.feedback=this.add.graphics().setDepth(36);
-  this.applyQuality(this.quality,false);
-  const keyboard=(event:KeyboardEvent)=>{
-   if(this.settingsMenu.open||this.pauseMenu.open){if(event.code!=='KeyP')return}
-   if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(event.code)){event.preventDefault();if(this.status==='play')this.keys.add(event.code);this.syncControlButtons();return}
-   if(event.repeat||this.settingsMenu.open)return;
-   if(event.code==='KeyP'){event.preventDefault();this.togglePause();return}
-   if(this.pauseMenu.open)return;
-   if(event.code==='Space'||event.code==='ArrowUp'||event.code==='KeyW'){event.preventDefault();this.jump()}
-  };
-  document.addEventListener('keydown',keyboard);
-  const keyup=(event:KeyboardEvent)=>{this.keys.delete(event.code);this.syncControlButtons()};
-  const clearControls=()=>this.clearControls();
-  document.addEventListener('keyup',keyup);window.addEventListener('blur',clearControls);
-  for(const [id,direction] of [['left',-1],['right',1]] as const){
-   const button=$(id);
-   button.onpointerdown=event=>{event.preventDefault();if(this.status!=='play')return;button.setPointerCapture(event.pointerId);this.touchDirections.set(event.pointerId,direction);button.classList.add('held')};
-   const release=(event:PointerEvent)=>{this.touchDirections.delete(event.pointerId);button.classList.remove('held')};
-   button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
+  for(const kind of Object.keys(recipes) as BuildingKind[]){const t=this.textures.createCanvas('build-'+kind,220,148)!;t.context.scale(2,2);paintBuilding(t.context,kind);t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST)}
+  for(const kind of ['wood','stone'] as const){const t=this.textures.createCanvas('resource-'+kind,64,48)!,c=t.context;c.scale(2,2);
+   if(kind==='wood'){c.fillStyle='#6d533a';c.fillRect(2,13,28,8);c.fillStyle='#b89b68';c.fillRect(2,13,5,8);c.fillStyle='#967144';c.fillRect(7,8,24,6);c.fillStyle='#ddc292';c.fillRect(7,8,4,6);c.fillStyle='#617d51';c.fillRect(17,6,9,3)}else{c.fillStyle='#637b77';c.beginPath();c.moveTo(1,22);c.lineTo(5,7);c.lineTo(19,3);c.lineTo(30,15);c.lineTo(27,23);c.closePath();c.fill();c.fillStyle='#a3b1a0';c.fillRect(7,7,12,3);c.fillStyle='#435d58';c.fillRect(20,15,8,6)}t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
-  $('start').onclick=()=>this.start();$('jump').onpointerdown=event=>{event.preventDefault();this.jump()};$('jump').onclick=event=>{if(event.detail===0)this.jump()};$('pause').onclick=()=>this.togglePause();
-  $('god').onclick=()=>{this.run.god=!this.run.god;this.refreshHUD()};
-  $('music').onclick=()=>this.audio.toggle();
-  $('quality-low').onclick=()=>this.applyQuality('low');$('quality-high').onclick=()=>this.applyQuality('high');
-  $('settings').onclick=()=>this.openSettings();$('welcome-settings').onclick=()=>this.openSettings();$('pause-settings').onclick=()=>this.openSettings();
-  $('close-settings').onclick=()=>this.closeSettings();$('done-settings').onclick=()=>this.closeSettings();
-  $('resume').onclick=()=>this.togglePause();$('restart').onclick=()=>this.start();
-  this.pauseMenu.addEventListener('cancel',event=>{event.preventDefault();if(!this.settingsMenu.open)this.togglePause()});
-  this.settingsMenu.addEventListener('cancel',event=>{event.preventDefault();event.stopPropagation();this.closeSettings()});
-  $('fullscreen').onclick=()=>{try{if(this.scale.isFullscreen)this.scale.stopFullscreen();else this.scale.startFullscreen()}catch{$('fullscreen').textContent='⛶ Không hỗ trợ'}};
-  this.scale.on('enterfullscreen',()=>{$('fullscreen').textContent='⛶ Thu nhỏ'});this.scale.on('leavefullscreen',()=>{$('fullscreen').textContent='⛶ Mở'});
-  const visibility=()=>{if(document.hidden&&this.status==='play')this.togglePause()};document.addEventListener('visibilitychange',visibility);
-  this.events.once('shutdown',()=>{document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',keyboard);document.removeEventListener('keyup',keyup);window.removeEventListener('blur',clearControls);this.audio.sync(false)});
-  this.centerCamera();this.physics.pause();this.drawEffects();this.refreshHUD();
+  for(const n of resourceNodes){const image=this.add.image(n.x,groundAt(n.x),'resource-'+n.kind).setOrigin(.5,1).setDisplaySize(32,24).setDepth(12);this.nodes.set(n.id,image)}
+  this.player=this.physics.add.image(this.state.x,groundAt(this.state.x)-1,'__WHITE').setOrigin(.5,1).setDepth(20);
+  this.refreshAppearance();this.physics.world.setBounds(0,0,WORLD_WIDTH,WORLD_HEIGHT);this.player.setCollideWorldBounds(true).setGravityY(2088).setMaxVelocity(240,900);
+  const body=this.player.body as Phaser.Physics.Arcade.Body;body.setSize(48,88);body.setOffset(24,40);this.physics.add.collider(this.player,floor);
+  this.fx=this.add.graphics().setDepth(24);this.preview=this.add.image(0,0,'build-tent').setOrigin(.5,1).setDisplaySize(110,74).setDepth(22).setVisible(false);
+  this.fishLabel=this.add.text(0,0,'',{fontFamily:'monospace',fontSize:'11px',color:'#fff3bf',backgroundColor:'#254b42e8',padding:{x:6,y:4}}).setOrigin(.5,1).setDepth(25).setVisible(false);
+  this.restoreWorld();this.applyQuality(this.quality,false);this.centerCamera();this.bindControls();this.physics.pause();this.refreshHUD();
   if(import.meta.env.DEV)(window as unknown as {forest:Forest}).forest=this;
  }
- applyQuality(quality:Quality,save=true){
-  this.quality=quality;
-  const scale=quality==='high'?2:1;
-  if(this.scale.width!==800*scale){this.scale.resize(800*scale,360*scale);this.cameras.main.setSize(800*scale,360*scale);this.cameras.main.setZoom(scale);this.centerCamera()}
-  this.fog.forEach(fog=>fog.setVisible(quality==='high'));
-  this.particles=this.particles.slice(-(quality==='high'?96:32));
-  $('quality-low').setAttribute('aria-pressed',String(quality==='low'));$('quality-high').setAttribute('aria-pressed',String(quality==='high'));
-  document.body.dataset.quality=quality;
-  if(save)try{localStorage.setItem('forest-quality',quality)}catch{}
-  if(this.status!=='play')this.drawEffects();
+ refreshAppearance(){
+  const key='camper-'+Object.values(this.state.equipped).join('-');
+  if(!this.textures.exists(key)){const texture=this.textures.createCanvas(key,96*8,128)!,c=texture.context;c.scale(2,2);for(let i=0;i<8;i++){c.save();c.translate(i*48,0);paintCamper(c,this.state,i);c.restore()}texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);for(let i=0;i<8;i++)texture.add('run'+i,0,i*96,0,96,128)}
+  this.player.setTexture(key,'run0').setDisplaySize(48,64);
  }
- clearFeedback(){this.particles=[];this.labels.forEach(label=>label.view.destroy());this.labels=[];this.feedback?.clear();this.beams?.clear()}
- emit(x:number,y:number,color:number,count:number,speed:number,gravity=40){
-  const cap=this.quality==='high'?96:32,n=this.quality==='high'?count:Math.max(2,Math.floor(count/3));
-  for(let i=0;i<n;i++){
-   const angle=Math.random()*Math.PI*2,life=.3+Math.random()*.4;
-   this.particles.push({x,y,vx:Math.cos(angle)*speed*(.3+Math.random()*.7),vy:Math.sin(angle)*speed*.6-15,life,max:life,color,size:1+Math.random()*1.5,gravity});
-  }
-  this.particles=this.particles.slice(-cap);
- }
- floatText(x:number,y:number,message:string,color:number){
-  if(this.labels.length>=6)this.labels.shift()?.view.destroy();
-  const view=this.add.text(x,y,message,{fontFamily:'monospace',fontSize:'10px',color:'#'+color.toString(16).padStart(6,'0'),stroke:'#11152b',strokeThickness:3}).setOrigin(.5).setDepth(40).setResolution(2);
-  this.labels.push({view,life:1});
- }
- updateFeedback(dt:number){
-  this.landing=Math.max(0,this.landing-dt);this.pickupFlash=Math.max(0,this.pickupFlash-dt);this.entryPulse=Math.max(0,this.entryPulse-dt);
-  for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.gravity*dt}
-  this.particles=this.particles.filter(p=>p.life>0);
-  for(const label of this.labels){label.life-=dt;label.view.y-=18*dt;label.view.setAlpha(Math.min(1,label.life*2));if(label.life<=0)label.view.destroy()}
-  this.labels=this.labels.filter(label=>label.life>0);
-  this.trailTime-=dt;
-  if(this.run.boost>0&&this.trailTime<=0){this.trailTime=this.quality==='high'?.05:.14;this.emit(this.player.x-10,this.player.y-20,0xffd98b,2,16,0)}
- }
- afterPhysics(_dt:number){
-  this.run.distance=Math.max(this.run.distance,Math.max(0,this.player.x-122));
-  this.layers.forEach((layer,i)=>layer.tilePositionX=this.cameras.main.scrollX*forestLayers[i].speed*2);
-  this.playerShadow.setPosition(this.player.x,groundAt(this.player.x)+2);this.centerCamera();
-  $('chapter').querySelector('span')!.textContent=regionAt(this.player.x).name+' · '+Math.round(this.player.x/100)+' / 160';
-  const grounded=(this.player.body as Phaser.Physics.Arcade.Body).blocked.down;
-  if(grounded&&!this.wasGrounded){this.landing=.14;this.emit(this.player.x,groundAt(this.player.x),0x94aaa3,8,45,45)}
-  this.wasGrounded=grounded;
-  for(const object of this.items.getChildren() as Item[]){object.halo?.setPosition(object.x,object.y).setAlpha(.4+Math.sin(this.run.time*3+(object.phase||0))*.15)}
- }
- drawUpgradeFx(){
-  const f=this.feedback,beam=this.beams;f.clear();beam.clear();const t=this.run.time,x=this.player.x,y=this.player.y-32;
-  const altitude=Math.max(0,groundAt(this.player.x)-this.player.y);this.playerShadow.setAlpha(.8-altitude/300).setDisplaySize(Math.max(15,42-altitude*.15),8);
-  for(const p of this.particles){f.fillStyle(p.color,Math.max(0,p.life/p.max));f.fillRect(p.x,p.y,p.size,p.size)}
-  if(this.run.shield>0){
-   const reveal=Math.min(1,this.djTime/1.2),px=this.performer.x,py=this.performer.y;
-   const beamCount=this.quality==='high'?3:1;
-   for(let i=0;i<beamCount;i++){
-    const sourceX=px+(i-1)*90+Math.sin(t*.6+i)*24;
-    beam.fillStyle(i%2?0x9fd4f5:0xf3d695,(.025+.035*reveal)*(i===1?1:.6));
-    beam.fillTriangle(sourceX,-20,px-50-i*12,py+85,px+50+i*12,py+85);
-   }
-   if(this.djTime<1.2){
-    beam.lineStyle(1,0xffe8a9,.5*(1-reveal));beam.lineBetween(px,0,px,py+80);
-    for(let i=0;i<8;i++){const ny=(t*140+i*31)%Math.max(10,py+90);f.fillStyle(0xffe3aa,.7);f.fillRect(px-8+(i*7)%16,ny,1,4)}
-   }
-   // Moving specular reflection and travelling water ripple.
-   f.lineStyle(1,0xebfcff,.6);f.beginPath();f.arc(x,y+6,31,Math.PI*.35+Math.sin(t)*.1,Math.PI*.8+Math.sin(t)*.1);f.strokePath();
-   f.fillStyle(0xffffff,.65);f.fillEllipse(x-15+Math.sin(t*.7)*2,y-19,3,7);
-   if(this.shieldFlash>0){const progress=1-this.shieldFlash/.35;f.lineStyle(1.5,0xc8f6ff,1-progress);f.strokeCircle(x,y,35+progress*14);f.lineStyle(1,0x86dbed,(1-progress)*.5);f.strokeCircle(x,y,30+progress*9)}
-  }
-  if(this.entryPulse>0){const p=1-this.entryPulse/.9;f.lineStyle(1.5,0xffe2a2,1-p);f.strokeEllipse(x,groundAt(x),20+p*110,4+p*18)}
-  // LED pads and a small equalizer turn the hovering deck into a live stage.
-  if(this.run.shield>0){const px=this.performer.x,py=this.performer.y;for(let i=0;i<5;i++){f.fillStyle(i%2?0x9be4e8:0xffdc87,.8);f.fillRect(px-7+i*3,py+68-Math.abs(Math.sin(this.djTime*7+i))*5,1,2+Math.abs(Math.sin(this.djTime*7+i))*5)}}
- }
+ restoreWorld(){for(const n of resourceNodes)this.nodes.get(n.id)?.setVisible(!this.state.harvested.includes(n.id));this.structures.forEach(s=>s.destroy());this.structures=this.state.buildings.map(b=>this.add.image(b.x,groundAt(b.x)+1,'build-'+b.kind).setOrigin(.5,1).setDisplaySize(110,74).setDepth(16))}
  get pauseMenu(){return $('pause-menu') as HTMLDialogElement}
  get settingsMenu(){return $('settings-menu') as HTMLDialogElement}
- openSettings(){
-  if(this.status==='play')this.togglePause();
-  this.pauseMenu.close();
-  if(!this.settingsMenu.open)this.settingsMenu.showModal();
+ get inventoryMenu(){return $('inventory-menu') as HTMLDialogElement}
+ get buildMenu(){return $('build-menu') as HTMLDialogElement}
+ get modalOpen(){return this.pauseMenu.open||this.settingsMenu.open||this.inventoryMenu.open||this.buildMenu.open}
+ bindControls(){
+  const keyboard=(event:KeyboardEvent)=>{
+   if(this.modalOpen){if(event.code==='KeyP'&&this.pauseMenu.open){event.preventDefault();this.togglePause()}return}
+   if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(event.code)){event.preventDefault();if(this.status==='play')this.keys.add(event.code);this.syncControlButtons();return}
+   if(event.repeat)return;
+   const actions:Record<string,()=>void>={Space:()=>this.jump(),ArrowUp:()=>this.jump(),KeyW:()=>this.jump(),KeyP:()=>this.togglePause(),KeyE:()=>this.interact(),KeyI:()=>this.openPanel('inventory'),KeyB:()=>this.openPanel('build'),Escape:()=>this.cancelAction()};
+   if(actions[event.code]){event.preventDefault();actions[event.code]()}
+  };
+  const keyup=(event:KeyboardEvent)=>{this.keys.delete(event.code);this.syncControlButtons()};
+  const blur=()=>{this.clearControls();this.persist()};const visibility=()=>{if(document.hidden&&this.status==='play')this.togglePause()};
+  document.addEventListener('keydown',keyboard);document.addEventListener('keyup',keyup);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',visibility);
+  for(const [id,direction] of [['left',-1],['right',1]] as const){const button=$(id);button.onpointerdown=e=>{e.preventDefault();if(this.status!=='play'||this.modalOpen)return;button.setPointerCapture(e.pointerId);this.touchDirections.set(e.pointerId,direction);this.syncControlButtons()};const release=(e:PointerEvent)=>{this.touchDirections.delete(e.pointerId);this.syncControlButtons()};button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;}
+  $('jump').onpointerdown=e=>{e.preventDefault();this.jump()};$('jump').onclick=e=>{if(e.detail===0)this.jump()};
+  $('start').onclick=()=>this.start();$('pause').onclick=()=>this.togglePause();$('resume').onclick=()=>this.togglePause();$('restart').onclick=()=>{this.closeAll();this.cancelAction();this.player.setPosition(120,groundAt(120)-1).setVelocity(0);this.resume();this.persist()};
+  for(const id of ['settings','welcome-settings','pause-settings'])$(id).onclick=()=>this.openPanel('settings');
+  $('inventory').onclick=()=>this.openPanel('inventory');$('build').onclick=()=>this.openPanel('build');$('action').onclick=()=>this.interact();$('cancel-action').onclick=()=>this.cancelAction();
+  for(const panel of ['settings','inventory','build'] as const){for(const id of ['close-'+panel,'done-'+panel])$(id).onclick=()=>this.closePanel(panel);($(panel+'-menu') as HTMLDialogElement).addEventListener('cancel',e=>{e.preventDefault();this.closePanel(panel)})}
+  this.pauseMenu.addEventListener('cancel',e=>{e.preventDefault();this.togglePause()});
+  $('quality-low').onclick=()=>this.applyQuality('low');$('quality-high').onclick=()=>this.applyQuality('high');
+  $('fullscreen').onclick=()=>{if(this.scale.isFullscreen)this.scale.stopFullscreen();else this.scale.startFullscreen()};
+  this.inventoryMenu.addEventListener('click',e=>{const button=(e.target as Element).closest<HTMLButtonElement>('[data-gear]');if(button&&equip(this.state,button.dataset.gear!)){this.refreshAppearance();this.renderInventory();this.persist()}});
+  this.buildMenu.addEventListener('click',e=>{const button=(e.target as Element).closest<HTMLButtonElement>('[data-build]');if(button){this.selected=button.dataset.build as BuildingKind;this.buildMenu.close();this.resume();this.toast('Chọn vị trí, nhấn E hoặc nút Đặt. Esc để hủy.');this.refreshHUD()}});
+  this.events.once('shutdown',()=>{document.removeEventListener('keydown',keyboard);document.removeEventListener('keyup',keyup);window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',visibility);this.persist()});
  }
- closeSettings(){this.settingsMenu.close();this.syncPauseMenu()}
- syncPauseMenu(){
-  if(this.status==='pause'){
-   $('pause-score').textContent='✦ '+(Math.floor(this.run.distance/8)+this.run.bonus)+' ĐIỂM';
-   if(!this.pauseMenu.open)this.pauseMenu.showModal();
-  }else if(this.pauseMenu.open)this.pauseMenu.close();
+ syncControlButtons(){for(const [id,codes] of [['left',['ArrowLeft','KeyA']],['right',['ArrowRight','KeyD']]] as const)$(id).classList.toggle('held',codes.some(c=>this.keys.has(c))||[...this.touchDirections.values()].includes(id==='left'?-1:1))}
+ clearControls(){this.keys.clear();this.touchDirections.clear();this.player?.setVelocityX(0);this.syncControlButtons()}
+ closeAll(){for(const id of ['pause','settings','inventory','build'])($(id+'-menu') as HTMLDialogElement).close()}
+ pause(){if(this.status==='play'){this.status='pause';this.clearControls();this.physics.pause();this.persist()}}
+ resume(){if(this.status==='ready')return;this.status='play';this.accumulator=0;this.physics.resume();this.pauseMenu.close();this.refreshHUD()}
+ start(){this.closeAll();this.status='play';this.physics.resume();$('welcome').hidden=true;void initFirebase().catch(()=>{});this.toast('I: kho đồ · B: dựng trại · E: thu thập hoặc câu cá');this.refreshHUD()}
+ togglePause(){if(this.status==='ready')return;if(this.status==='play'){this.pause();this.pauseMenu.showModal()}else if(this.pauseMenu.open)this.resume();this.refreshHUD()}
+ openPanel(panel:'settings'|'inventory'|'build'){
+  if(this.selected||this.fishing)this.cancelAction();this.pause();this.closeAll();if(panel==='inventory')this.renderInventory();if(panel==='build')this.renderRecipes();($(panel+'-menu') as HTMLDialogElement).showModal();this.refreshHUD();
  }
- musicLabel(){const audio=this.audio;$('music').textContent=audio.failed?'Thử lại':audio.blocked&&audio.enabled?'Chạm để phát':audio.enabled?'Bật':'Tắt';$('music').setAttribute('aria-pressed',String(audio.enabled))}
- syncAudio(){if(this.status==='pause'){this.audio.pause();return}this.audio.sync(this.status==='play'&&this.run.shield>0)}
- syncControlButtons(){for(const [id,codes] of [['left',['ArrowLeft','KeyA']],['right',['ArrowRight','KeyD']]] as const)$(id).classList.toggle('held',codes.some(code=>this.keys.has(code))||[...this.touchDirections.values()].includes(id==='left'?-1:1))}
- clearControls(){this.keys.clear();this.touchDirections.clear();for(const id of ['left','right','jump'])$(id).classList.remove('held');this.player?.setVelocityX(0)}
- start(){
-  this.clearControls();
-  void initFirebase().catch(error=>console.warn('Firebase chưa sẵn sàng; game vẫn chơi offline.',error));
-  this.settingsMenu.close();this.pauseMenu.close();this.clearFeedback();this.audio.unlock();this.run=newRun(this.run.god);this.accumulator=0;this.djTime=0;this.shieldFlash=this.shieldBurst=0;this.landing=this.pickupFlash=this.entryPulse=this.trailTime=0;this.wasGrounded=false;
-  this.items.clear(true,true);this.obstacles.clear(true,true);this.player.setPosition(122,groundAt(122)-1).setVelocity(0).setFrame('run0');
-  this.performer.setPosition(572,-115).setVisible(false);this.djGlow.setVisible(false);this.fx.clear();
-  this.status='play';this.centerCamera();this.populateMap();this.physics.resume();$('welcome').hidden=true;this.pauseButton(false);this.syncAudio();this.drawEffects();this.refreshHUD();
+ closePanel(panel:string){($(panel+'-menu') as HTMLDialogElement).close();if(this.status!=='ready'){this.pauseMenu.showModal();this.refreshHUD()}}
+ jump(){if(this.status==='ready'){this.start();return}if(this.status==='play'&&!this.modalOpen&&(this.player.body as Phaser.Physics.Arcade.Body).blocked.down){this.cancelAction();this.player.setVelocityY(-720)}}
+ applyQuality(q:Quality,save=true){this.quality=q;const s=q==='high'?2:1;this.scale.resize(800*s,360*s);this.cameras.main.setSize(800*s,360*s).setZoom(s);this.centerCamera();$('quality-low').setAttribute('aria-pressed',String(q==='low'));$('quality-high').setAttribute('aria-pressed',String(q==='high'));document.body.dataset.quality=q;if(save)try{localStorage.setItem('forest-quality',q)}catch{}}
+ centerCamera(){if(this.player){this.cameras.main.centerOn(this.player.x,this.player.y-65);this.cameras.main.preRender()}}
+ persist(){if(!this.player)return;this.state.x=Math.round(this.player.x);try{localStorage.setItem(SAVE_KEY,JSON.stringify(this.state));this.storageWarning=false}catch{if(!this.storageWarning){this.storageWarning=true;this.toast('Không lưu được trên thiết bị này. Tiến trình hiện chỉ giữ trong lượt chơi.')}}}
+ toast(message:string){$('toast').textContent=message;$('toast').hidden=false;window.clearTimeout(this.toastTimer);this.toastTimer=window.setTimeout(()=>$('toast').hidden=true,4200)}
+ nearbyNode(){return resourceNodes.find(n=>!this.state.harvested.includes(n.id)&&Math.abs(n.x-this.player.x)<75)}
+ placementX(){return Math.round((this.player.x+(this.player.flipX?-80:80))/32)*32}
+ placementError(x:number){if(x<65||x>WORLD_WIDTH-65)return 'Quá gần biên bản đồ';if(waterAt(x)||waterAt(x-55)||waterAt(x+55))return 'Chọn đất khô, cách xa bờ nước';if(groundAt(x-52)!==groundAt(x+52))return 'Cần một khoảng đất bằng';if(this.state.buildings.some(b=>Math.abs(b.x-x)<112))return 'Quá gần công trình khác';if(resourceNodes.some(n=>!this.state.harvested.includes(n.id)&&Math.abs(n.x-x)<58))return 'Thu thập vật liệu ở đây trước';return ''}
+ interact(){
+  if(this.status!=='play'||this.modalOpen)return;
+  const grounded=(this.player.body as Phaser.Physics.Arcade.Body).blocked.down;
+  if(!grounded){this.toast('Đứng vững trên mặt đất trước nhé.');return}
+  if(this.selected){const x=this.placementX(),error=this.placementError(x);if(error){this.toast(error);return}if(!craft(this.state,this.selected,x)){this.toast('Chưa đủ gỗ/đá hoặc trại đã đủ 80 công trình.');return}const name=recipes[this.selected].name;this.selected=null;this.preview.setVisible(false);this.restoreWorld();this.persist();this.toast('Đã dựng '+name.toLowerCase()+'.');this.refreshHUD();return}
+  if(this.fishing){if(this.fishing.phase==='waiting'){this.toast('Phao chưa chìm. Chờ cá cắn câu!');return}const lake=waters.find(w=>w.id===this.fishing!.waterId)!;const caught=rollFish(lake.habitat);storeFish(this.state,caught.species.id,caught.length);this.fishing=null;this.persist();this.toast('Câu được '+caught.species.name+' · '+caught.length+' cm · '+caught.species.rarity+'. Đã cho vào kho đồ.');this.refreshHUD();return}
+  const node=this.nearbyNode();if(node){this.state.harvested.push(node.id);this.state[node.kind]+=node.kind==='wood'?5:4;this.nodes.get(node.id)?.setVisible(false);this.persist();this.toast(node.kind==='wood'?'+5 gỗ khô':'+4 đá');this.refreshHUD();return}
+  const lake=waterAt(this.player.x);if(lake){this.clearControls();this.fishing={phase:'waiting',remaining:2.5+Math.random()*2.5,waterId:lake.id};this.toast('Đã thả câu tại '+lake.name+'. Nhấn E khi phao chìm!');this.refreshHUD();return}
+  this.toast('Đến gần gỗ/đá để thu thập, hoặc tới Ao Sen phía bên phải để câu cá.');
  }
- jump(){if(this.status==='ready'||this.status==='over'){this.start();return}if(this.status==='play'&&(this.player.body as Phaser.Physics.Arcade.Body).blocked.down)this.player.setVelocityY(-720)}
- pauseButton(paused:boolean){const button=$('pause');button.innerHTML='<span aria-hidden="true">'+(paused?'▶':'Ⅱ')+'</span>';button.setAttribute('aria-label',paused?'Tiếp tục game':'Tạm dừng game');button.setAttribute('title',paused?'Tiếp tục (P)':'Tạm dừng (P)')}
- togglePause(){
-  if(this.status==='play'){this.clearControls();this.status='pause';this.physics.pause();this.pauseButton(true)}
-  else if(this.status==='pause'){this.status='play';this.accumulator=0;this.physics.resume();this.pauseButton(false)}
-  this.syncAudio();this.syncPauseMenu();this.refreshHUD();
+ cancelAction(){this.fishing=null;this.selected=null;this.preview?.setVisible(false);this.fishLabel?.setVisible(false);this.refreshHUD()}
+ renderInventory(){
+  const source=this.textures.get(this.player.texture.key).getSourceImage() as HTMLCanvasElement,canvas=document.createElement('canvas');canvas.width=96;canvas.height=128;canvas.getContext('2d')!.drawImage(source,0,0,96,128,0,0,96,128);($('camper-preview') as HTMLImageElement).src=canvas.toDataURL();
+  $('inventory-summary').textContent=this.state.wood+' gỗ · '+this.state.stone+' đá · Cần câu & bộ dụng cụ cắm trại';
+  $('gear-list').innerHTML=(Object.keys(slots) as Slot[]).map(slot=>'<section class="gear-slot"><h3>'+slots[slot]+'</h3><div class="gear-options">'+gear.filter(g=>g.slot===slot).map(g=>'<button data-gear="'+g.id+'" aria-pressed="'+(this.state.equipped[slot]===g.id)+'"><i style="--swatch:'+g.color+'"></i><span>'+g.name+'</span><small>'+(this.state.equipped[slot]===g.id?'Đang mặc':'Trang bị')+'</small></button>').join('')+'</div></section>').join('');
+  $('fish-list').innerHTML=fishSpecies.map(f=>{const own=this.state.fish[f.id];return '<div class="fish-entry '+(own?'caught':'')+'"><span class="fish-icon" style="--fish:'+f.color+'">◀●</span><div><strong>'+(own?f.name:'???')+'</strong><small>'+f.rarity+(own?' · Lớn nhất '+own.largest+' cm':' · Chưa khám phá')+'</small></div><b>×'+(own?.count??0)+'</b></div>'}).join('');
+  const counts=Object.values(this.state.fish).reduce((n,f)=>n+(f?.count??0),0);$('fish-summary').textContent=counts+' cá · '+Object.keys(this.state.fish).length+'/'+fishSpecies.length+' loài';
  }
- pickup(item:Item){
-  if(this.status!=='play'||!item.active)return;
-  const px=item.x,py=item.y;this.pickupFlash=.22;
-  if(item.kind==='light'){const points=this.run.boost>0?100:50;firefly(this.run);this.floatText(px,py,'+'+points,0xffe6a2);this.emit(px,py,0xffe6a2,8,40)}
-  if(item.kind==='power'){this.run.boost=10;this.floatText(this.player.x,this.player.y-65,'✦ x2 · 10s',0xffe6a2);this.emit(this.player.x,this.player.y-28,0xffd77e,18,90)}
-  if(item.kind==='dj'){
-   if(this.run.shield===0){this.djTime=0;this.performer.setPosition(this.player.x+150,this.player.y-415).setVisible(true)}
-   this.entryPulse=.9;this.emit(this.player.x,this.player.y-28,0x9fefff,22,100);this.floatText(this.player.x,this.player.y-68,'♫ KHIÊN DJ',0xa5eaf5);
-   this.run.shield=SHIELD_MAX;this.shieldFlash=this.shieldBurst=0;this.syncAudio();
-  }
-  item.destroy();this.refreshHUD();
- }
- collide(item:Item){
-  if(this.status!=='play'||!item.active)return;item.destroy();
-  const hadShield=this.run.shield>0,lose=hit(this.run);
-  if(hadShield){this.shieldFlash=.35;this.emit(this.player.x,this.player.y-28,0xb5efff,14,100);if(this.run.shield===0){this.shieldBurst=.65;this.floatText(this.player.x,this.player.y-65,'KHIÊN ĐÃ VỠ',0xc6eaff)}}
-  if(this.run.shield===0){this.performer.setVisible(false);this.djGlow.setVisible(false);this.syncAudio()}
-  if(lose)this.end();else this.refreshHUD();
- }
- end(){
-  this.status='over';this.physics.pause();this.run.shield=0;this.run.boost=0;this.performer.setVisible(false);this.djGlow.setVisible(false);this.shieldBurst=this.shieldFlash=0;this.syncAudio();
-  const score=Math.floor(this.run.distance/8)+this.run.bonus;this.best=Math.max(this.best,score);
-  try{localStorage.setItem('forest-best',String(this.best))}catch{}
-  $('welcome').hidden=false;$('intro-title').textContent='Một bước nghỉ chân.';$('intro-message').textContent='Bạn đạt '+score+' điểm. Rừng vẫn còn nhiều điều để khám phá!';$('start').textContent='Chơi lại →';this.drawEffects();this.refreshHUD();
- }
- centerCamera(){
-  if(!this.player)return;
-  const camera=this.cameras.main;camera.centerOn(this.player.x,this.player.y-65);camera.preRender();
-  const {x,y}=camera.worldView;
-  this.sky.setPosition(x,y);this.layers.forEach(layer=>layer.setPosition(x,y));
-  this.fog.forEach((fog,i)=>fog.setPosition(x,y+(i===0?178:244)));
-  this.goldenScene.setPosition(x,y);this.ambient.setPosition(x,y);
- }
- populateMap(){
-  for(let x=300,i=0;x<WORLD_WIDTH-100;x+=180,i++){
-   const kind=i%13===6?'dj':i%13===11?'power':'light';
-   this.spawnItem(kind,x,groundAt(x)-(kind==='light'?70:30));
-  }
- }
- spawnItem(kind:'light'|'dj'|'power',x=this.player.x+120,y=groundAt(x)-(kind==='light'?70:30)){
-  const o=this.items.create(x,y,kind) as Item;o.kind=kind;o.baseY=o.y;o.phase=this.run.time;
-  o.setDisplaySize(kind==='light'?20:34,kind==='light'?15:38).setDepth(19);
-  o.halo=this.add.image(o.x,o.y,kind==='light'?'light-aura':'dj-aura').setDisplaySize(kind==='light'?34:62,kind==='light'?34:62).setTint(kind==='dj'?0x99dfff:0xffe6a2).setAlpha(.6).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
-  o.once('destroy',()=>o.halo?.destroy());
-  if(kind==='light')(o.body as Phaser.Physics.Arcade.Body).setSize(32,24);
-  return o;
- }
- update(_time:number,delta:number){
-  if(this.status!=='play')return;
-  this.accumulator+=Math.min(delta/1000,.1);
-  while(this.accumulator>=STEP&&this.status==='play'){
-   this.simulate(STEP);this.physics.world.update(this.run.time*1000,1000/60);this.physics.world.postUpdate();this.afterPhysics(STEP);this.accumulator-=STEP;
-  }
-  if(this.status==='play'){this.drawEffects();this.refreshHUD()}
- }
- simulate(dt:number){
-  const keyboardDirection=Number(this.keys.has('ArrowRight')||this.keys.has('KeyD'))-Number(this.keys.has('ArrowLeft')||this.keys.has('KeyA'));
-  const touchDirection=[...this.touchDirections.values()].reduce((sum,value)=>sum+value,0);
-  const direction=Math.sign(keyboardDirection+touchDirection);
-  const speed=direction*240;
-  const movingBody=this.player.body as Phaser.Physics.Arcade.Body;
-  if(direction&&movingBody.blocked.down&&movingBody.velocity.y>=0){
-   const nextGround=groundAt(this.player.x+direction*18),rise=this.player.y-nextGround;
-   if(rise>0&&rise<=32){this.player.setY(nextGround-.5);movingBody.updateFromGameObject()}
-  }
-  this.player.setVelocityX(speed);if(direction)this.player.setFlipX(direction<0);
-  tick(this.run,dt,0);
-  if(this.run.shield>0)this.djTime+=dt;
-  this.updateFeedback(dt);
-  this.shieldFlash=Math.max(0,this.shieldFlash-dt);this.shieldBurst=Math.max(0,this.shieldBurst-dt);
-
-  this.fog.forEach((fog,i)=>fog.tilePositionX=this.run.time*(i+1)*5);
-
-  const body=this.player.body as Phaser.Physics.Arcade.Body,onGround=body.blocked.down&&body.velocity.y>=0;
-  this.player.setFrame(!onGround?(body.velocity.y<0?'jump':'fall'):this.landing>0?'land':this.pickupFlash>0?'pickup':speed===0?'run0':'run'+Math.floor(this.run.time*14)%8);
-  if(this.run.shield>0){
-   const progress=Math.min(1,this.djTime/1.2),ease=1-(1-progress)**3;
-   this.performer.setPosition(this.player.x+150,this.player.y-415+ease*197+Math.sin(this.djTime*2.5)*3*progress);
-   this.animateDJ();
-  }
- }
+ renderRecipes(){$('build-resources').textContent='Bạn có '+this.state.wood+' gỗ · '+this.state.stone+' đá';$('recipe-list').innerHTML=(Object.keys(recipes) as BuildingKind[]).map(kind=>{const r=recipes[kind],enough=this.state.wood>=r.wood&&this.state.stone>=r.stone;const texture=this.textures.get('build-'+kind).getSourceImage() as HTMLCanvasElement;return '<button class="recipe" data-build="'+kind+'" '+(enough?'':'disabled')+'><img src="'+texture.toDataURL()+'" alt=""><div><strong>'+r.name+'</strong><p>'+r.description+'</p><small>'+r.wood+' gỗ · '+r.stone+' đá</small></div><span>'+(enough?'Đặt →':'Thiếu')+'</span></button>'}).join('')}
  refreshHUD(){
-  $('score').textContent='✦ '+(Math.floor(this.run.distance/8)+this.run.bonus)+' ĐIỂM';$('best').textContent='KỶ LỤC '+this.best;
-  $('effects').textContent=this.status==='pause'?'TẠM DỪNG':this.status==='over'?'KẾT THÚC':this.status==='ready'?'SẴN SÀNG':this.run.god?'GOD MODE':'ĐANG KHÁM PHÁ';
-  $('god').textContent=this.run.god?'Bật':'Tắt';$('god').setAttribute('aria-pressed',String(this.run.god));
-  ($('pause') as HTMLButtonElement).disabled=this.status==='ready'||this.status==='over';
-  $('buff-card').hidden=this.run.boost<=0;$('buff-label').textContent='✦ HÀO QUANG x2 · '+Math.ceil(this.run.boost)+'s';($('buff-meter') as HTMLProgressElement).value=this.run.boost;
-  $('shield-card').hidden=this.run.shield<=0;$('shield-label').textContent='♫ KHIÊN NƯỚC · '+this.run.shield+'/3';($('shield-meter') as HTMLProgressElement).value=this.run.shield;
+  if(!this.player)return;
+  const total=Object.values(this.state.fish).reduce((n,f)=>n+(f?.count??0),0);$('score').textContent='GỖ '+this.state.wood+' · ĐÁ '+this.state.stone;$('effects').textContent=this.status==='pause'?'TẠM DỪNG':total+' CÁ · '+this.state.buildings.length+' CÔNG TRÌNH';
+  $('chapter').querySelector('span')!.textContent=waterAt(this.player.x)?.name??regionAt(this.player.x).name;
+  ($('pause') as HTMLButtonElement).disabled=this.status==='ready';$('pause').innerHTML='<span aria-hidden="true">'+(this.status==='pause'?'▶':'Ⅱ')+'</span>';$('pause').setAttribute('aria-label',this.status==='pause'?'Tiếp tục game':'Tạm dừng game');
+  const node=this.nearbyNode(),lake=waterAt(this.player.x);$('action-label').textContent=this.selected?'ĐẶT '+recipes[this.selected].name.toUpperCase():this.fishing?.phase==='bite'?'GIẬT CẦN!':this.fishing?'CHỜ CÁ…':node?node.kind==='wood'?'NHẶT GỖ':'NHẶT ĐÁ':lake?'CÂU CÁ':'TƯƠNG TÁC';
+  $('action').classList.toggle('bite',this.fishing?.phase==='bite');$('cancel-action').hidden=!this.selected&&!this.fishing;
  }
- animateDJ(){
-  const f=this.djMotion,t=this.djTime;f.clear();
-  for(const side of [-1,1]){
-   f.fillStyle(0x96b2ca);f.fillRect(side<0?-18:12,39,7,12);
-   f.fillStyle(0xacc3d7);f.fillRect(side<0?-20:13,48,8,5);
-   f.fillStyle(0xefbd9b);f.fillRect(side<0?-18:11,51+Math.sin(t*7+side)*2,7,4);
-   const cx=side*23,angle=t*4+side;f.fillStyle(0xb4d8e8);f.fillRect(cx+Math.cos(angle)*8,65+Math.sin(angle)*3,2,1);
-  }
+ update(_time:number,delta:number){if(this.status!=='play')return;this.accumulator+=Math.min(delta/1000,.1);while(this.accumulator>=STEP&&this.status==='play'){this.simulate(STEP);this.physics.world.update(this.clock*1000,1000/60);this.physics.world.postUpdate();this.centerCamera();this.accumulator-=STEP}this.drawWorldEffects();this.refreshHUD()}
+ simulate(dt:number){
+  this.clock+=dt;this.saveTime+=dt;if(this.saveTime>=10){this.saveTime=0;this.persist()}
+  const direction=Math.sign(Number(this.keys.has('ArrowRight')||this.keys.has('KeyD'))-Number(this.keys.has('ArrowLeft')||this.keys.has('KeyA'))+[...this.touchDirections.values()].reduce((a,b)=>a+b,0));
+  if(direction&&this.fishing){this.fishing=null;this.toast('Đã thu cần để di chuyển.')}
+  const body=this.player.body as Phaser.Physics.Arcade.Body;
+  if(direction&&body.blocked.down&&body.velocity.y>=0){const next=groundAt(this.player.x+direction*18),rise=this.player.y-next;if(rise>0&&rise<=32){this.player.setY(next-.5);body.updateFromGameObject()}}
+  this.player.setVelocityX(this.fishing?0:direction*220);if(direction)this.player.setFlipX(direction<0);this.player.setFrame('run'+(direction&&body.blocked.down?Math.floor(this.clock*12)%8:0));
+  if(this.fishing){this.fishing.remaining-=dt;if(this.fishing.remaining<=0){if(this.fishing.phase==='waiting'){this.fishing.phase='bite';this.fishing.remaining=2;this.toast('Cá cắn câu! Nhấn E / GIẬT CẦN!')}else{this.fishing=null;this.toast('Cá đã thoát. Thử thả câu lần nữa nhé.')}}}
  }
- drawEffects(){
-  const f=this.fx,a=this.ambient;f.clear();a.clear();const x=this.player.x,y=this.player.y-32,t=this.run.time;
-  for(let i=0;i<(this.quality==='high'?24:9);i++){a.fillStyle(0xc9d6d5,.7);a.fillRect(((i*113-t*15)%800+800)%800,70+(i*43)%210+Math.sin(t*2+i)*6,3,3)}
-  this.playerGlow.setVisible(this.run.boost>0).setPosition(x,y).setAlpha(1);
-  this.goldenScene.setVisible(this.run.shield>0).setAlpha(Math.min(1,this.djTime/.6));this.water.setVisible(this.run.shield>0).setPosition(x,y);
-  if(this.run.boost>0)for(let i=0;i<(this.quality==='high'?14:7);i++){
-   const phase=10-this.run.boost,angle=i*Math.PI/7+phase*1.5,r=23+i%3*5,px=x+Math.cos(angle)*r,py=y+Math.sin(angle)*r;
-   f.fillStyle(i%2?0xffe29a:0xfff9dc);f.fillRect(px,py,2,2);
-   if(i%3===0){f.fillStyle(0xffe29a);f.fillRect(px-2,py+1,6,1);f.fillRect(px+1,py-2,1,6)}
-  }
-  if(this.run.shield>0){
-   for(let i=0;i<(this.quality==='high'?28:10);i++){
-    const px=(i*83+this.run.distance*.15)%800,py=((i*37-t*21)%290+290)%290;
-    a.fillStyle(0xffe9a3);a.fillRect(px,py,2,2);if(i%5===0){a.fillStyle(0xfff2c7);a.fillRect(px-1,py+1,4,1)}
-   }
-   f.lineStyle(this.shieldFlash>0?3:1.5,this.shieldFlash>0?0xffffff:0x9deaff);f.strokeCircle(x,y,35);
-   f.lineStyle(2,0xefffff);f.beginPath();f.arc(x,y,29,3.65,4.6);f.strokePath();
-   for(let i=0;i<3-this.run.shield;i++){f.lineStyle(1,0xa7f4ff);f.beginPath();f.moveTo(x+17-i*23,y-24);f.lineTo(x+12-i*19,y-12);f.lineTo(x+18-i*19,y-7);f.lineTo(x+10-i*18,y+4);f.strokePath()}
-   const px=this.performer.x,top=this.performer.y,py=top+32,pulse=1+Math.sin(this.djTime*4)*.06;
-   this.djGlow.setVisible(true).setPosition(px,py).setDisplaySize(170*pulse,170*pulse);
-   for(let ring=0;ring<2;ring++){f.lineStyle(ring?1:1.5,ring?0xffe49a:0xfff2b8,ring?.44:.63);f.strokeCircle(px,py,(58+ring*10)*pulse)}
-   for(let i=0;i<(this.quality==='high'?18:8);i++){
-    const angle=i*Math.PI/9+this.djTime*(i%2?.55:-.4),r=(63+i%3*3)*pulse,nx=px+Math.cos(angle)*r,ny=py+Math.sin(angle)*r;
-    const alpha=.4+(.5+.5*Math.sin(this.djTime*5+i*2))*.6;
-    f.fillStyle(0xfff6ce,alpha);f.fillRect(nx,ny,2,2);
-    if(i%3===0){f.fillStyle(0xffdd80,alpha);f.fillRect(nx-2,ny+.5,6,1);f.fillRect(nx+.5,ny-2,1,6)}
-   }
-   // Original moving stage shadow and musical notes, aligned with the console.
-   f.fillStyle(0xffe39b,.35);f.fillEllipse(px,top+85,(44+Math.sin(this.djTime*7)*2)*2,8);
-   for(let i=0;i<3;i++){
-    const progress=(this.djTime*.45+i/3)%1,nx=px-48+i*42+Math.sin(progress*5+i)*5,ny=top+38-progress*45;
-    f.lineStyle(1,0xfff0a8,1-progress);f.lineBetween(nx,ny,nx,ny-7);f.lineBetween(nx,ny-7,nx+4,ny-6);f.fillStyle(0xfff0a8,1-progress);f.fillEllipse(nx-1,ny,4,2);
-    if(i%2===0){f.lineBetween(nx+4,ny-6,nx+4,ny+1);f.fillEllipse(nx+3,ny+1,4,2)}
-   }
-  }else this.djGlow.setVisible(false);
-  if(this.shieldBurst>0){const alpha=this.shieldBurst/.65;for(let i=0;i<16;i++){const angle=i*Math.PI/8,r=32+(1-alpha)*28;f.fillStyle(0xb7f4ff,alpha);f.fillRect(x+Math.cos(angle)*r,y+Math.sin(angle)*r,2+i%2,3)}}
-  this.drawUpgradeFx();
+ drawWorldEffects(){const f=this.fx;f.clear();this.preview.setVisible(Boolean(this.selected));if(this.selected){const x=this.placementX(),error=this.placementError(x);this.preview.setTexture('build-'+this.selected).setPosition(x,groundAt(x)+1).setAlpha(.6).setTint(error?0xffa69b:0xc4f3b3);f.lineStyle(1,error?0xe59e82:0xc9e4a2,.9);f.strokeEllipse(x,groundAt(x),115,8)}
+  this.fishLabel.setVisible(Boolean(this.fishing));if(this.fishing){const lake=waters.find(w=>w.id===this.fishing!.waterId)!,x=Phaser.Math.Clamp(this.player.x+55,lake.x+12,lake.x+lake.width-12),y=groundAt(lake.x)+12,px=this.player.x+13,py=this.player.y-30;f.lineStyle(2,0x927650);f.lineBetween(px,py,px+30,py-40);f.lineStyle(.7,0xeff4d9,.8);f.lineBetween(px+30,py-40,x,y);f.fillStyle(this.fishing.phase==='bite'?0xdd8b58:0xe1d6a0);f.fillCircle(x,y+Math.sin(this.clock*5)*2,this.fishing.phase==='bite'?3:2);this.fishLabel.setPosition(this.player.x,this.player.y-78).setText(this.fishing.phase==='bite'?'! GIẬT CẦN [E]':'Đang chờ cá…');}
+  const view=this.cameras.main.worldView;for(const lake of waters)if(lake.x<view.right&&lake.x+lake.width>view.x){f.lineStyle(1,0xd5e3c1,.5);for(let i=0;i<(this.quality==='high'?8:3);i++){const x=lake.x+30+(i*91+this.clock*5)%(lake.width-50),y=groundAt(lake.x)+14+(i%4)*10;f.strokeEllipse(x,y,12+Math.sin(this.clock*2+i)*4,2)}}
+  for(const b of this.state.buildings)if(b.kind==='fire'&&Math.abs(b.x-this.player.x)<650){const y=groundAt(b.x)-15;f.fillStyle(0xffc66d,.07);f.fillCircle(b.x,y,34+Math.sin(this.clock*4)*3);f.fillStyle(0xffdda0,.9);for(let i=0;i<3;i++)f.fillRect(b.x-7+i*7,y-((this.clock*20+i*9)%25),1,2)}
  }
-
 }
-const game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:800*RENDER_SCALE,height:360*RENDER_SCALE,backgroundColor:'#102b2b',pixelArt:false,roundPixels:true,antialias:true,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:0},fps:60,fixedStep:true,customUpdate:true}},scene:Forest});
+const game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:800*SCALE,height:360*SCALE,backgroundColor:'#afc1b0',roundPixels:true,antialias:true,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:0},fps:60,fixedStep:true,customUpdate:true}},scene:Forest});
 export default game;
-if(import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(console.warn)});
+if(import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})});
