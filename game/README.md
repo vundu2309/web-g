@@ -23,7 +23,7 @@ E2E dùng Chrome chạy ẩn, hiện cấu hình đường dẫn Chrome macOS tr
 
 ## Tính năng
 
-Nhân vật pixel có animation; Enemy đứng đất bên phải thả chướng ngại theo độ khó; đom đóm +50; lightstick x2 điểm đom đóm trong 10 giây; bàn DJ kích hoạt khiên 3 va chạm, DJ bay xuống đánh đàn và aura vàng. Khiên nứt/vỡ, hết khiên sẽ kết thúc DJ/nhạc. God mode không mất lượt chơi nhưng khiên vẫn giảm độ bền. Có lưu kỷ lục local, pause khi đổi tab và reset khi chơi lại.
+Nhân vật pixel có animation; khám phá bản đồ núi rừng dài 16.000 đơn vị, camera theo nhân vật; không có Enemy hay vật cản; đom đóm +50; lightstick x2 điểm đom đóm trong 10 giây; bàn DJ kích hoạt khiên 3 va chạm, DJ bay xuống đánh đàn và aura vàng. Khiên nứt/vỡ, hết khiên sẽ kết thúc DJ/nhạc. God mode không mất lượt chơi nhưng khiên vẫn giảm độ bền. Có lưu kỷ lục local, pause khi đổi tab và reset khi chơi lại.
 
 Hiệu ứng đã đối chiếu bản Canvas: gradient vàng toàn cảnh, gradient bóng nước, aura x2, hai lớp sáng quanh DJ, vòng tròn/hạt sáng nhấp nháy, nốt nhạc và bóng sân khấu. Texture được cache; sprite dùng nearest filtering, glow dùng lọc mượt. Clock và physics dùng chung bước 1/60 giây.
 
@@ -45,6 +45,10 @@ JS build khoảng 1,25 MB thô / 346 KB gzip, chưa tính nhạc. Chưa đo pin/
 - Hiệu ứng mô phỏng giới hạn 96 hạt ở mức Đẹp / 32 ở Tiết kiệm, tối đa 6 thông báo điểm; trạng thái này đóng băng khi pause và dọn khi restart.
 - Không thêm thư viện đồ họa hoặc ảnh tải ngoài. Hình và sprite được cache; chưa đo hiệu năng/pin trên thiết bị thật.
 
-## Di chuyển chủ động
+## Bản đồ khám phá
 
-Nhân vật chỉ di chuyển khi giữ điều khiển, giới hạn trong màn chơi. Nền và chướng ngại không tự trượt. Enemy báo vị trí trước khi thả; vật cản rơi xuống rồi đứng yên, tối đa 8 vật cản. Vật phẩm xuất hiện trong vùng có thể tiếp cận, tối đa 12. Điểm quãng đường chỉ tính theo vị trí xa nhất đã tới, không tăng khi đứng yên hoặc đi qua lại. Pause, mất focus và chơi lại xóa điều khiển đang giữ.
+Di chuyển trái/phải bằng phím hoặc nút cảm ứng, nhảy qua địa hình. Camera theo cả hai chiều và giữ trong biên bản đồ 16.000 × 900, tương đương 20 màn hình ngang. Các bậc thấp được bước lên tự động. Có 5 vùng: Thung lũng đom đóm, Rừng thông sương, Thác Ngân Hà, Đèo trăng và Phế tích trên mây. Cây, thông, nền đất/đá/rêu, nấm, biển đường, lều, thác và cổng đá tạo điểm nhận biết. Chương hiện tại và quãng đường hiển thị ở góc màn hình.
+
+Không còn Enemy hay sinh chướng ngại. Vật phẩm nằm cố định dọc bản đồ, được khôi phục khi chơi lại. Nền trời, rừng xa và sương bám đúng khung camera; các lớp xa cuộn chậm hơn. DJ, hào quang và nhạc đi theo nhân vật khi khám phá. Điểm quãng đường chỉ tăng khi tới vị trí xa hơn trước, không tăng khi đứng yên hoặc đi qua lại.
+
+Địa hình được vẽ một lần thành các mảnh 512 đơn vị và dùng lại; không tải ảnh lớn từ mạng. Chưa đo FPS và bộ nhớ trên điện thoại thật.

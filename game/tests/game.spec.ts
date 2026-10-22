@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-test('runner, pickups, DJ, shield, God mode, pause and restart',async({page})=>{
+test('explorer, pickups, DJ, shield, God mode, pause and restart',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5173');
  await page.waitForFunction(()=>Boolean((window as any).forest));
@@ -35,34 +35,30 @@ test('real Arcade collisions, correct light texture, clock and restart',async({p
   const f=(window as any).forest;f.game.loop.sleep();
   f.items.clear(true,true);f.cooldown=999;f.itemTime=999;f.run.god=true;
   const step=(n:number,ms=1000/60)=>{for(let i=0;i<n;i++)f.update(0,ms)};
-  step(10);const item=f.spawnItem('light');item.setPosition(122,276);(item.body as any).updateFromGameObject();step(2);
+  step(10);const item=f.spawnItem('light');item.setPosition(f.player.x,f.player.y-32);(item.body as any).updateFromGameObject();step(2);
   const actualPickup=f.run.bonus===50&&!item.active;
-  const baby=f.obstacles.create(112,274,'baby');baby.setDisplaySize(26,27).setOrigin(0);baby.body.updateFromGameObject();
-  f.run.shield=3;step(2);const actualHit=f.run.shield===2&&!baby.active;
   const clock=(ms:number,count:number)=>{f.start();f.run.god=true;f.cooldown=999;f.itemTime=999;step(count,ms);return f.run.time};
   const t60=clock(1000/60,600),t30=clock(1000/30,300);
   f.start();f.run.boost=10;step(599);const stillBoost=f.run.boost>0;step(2);const expired=f.run.boost===0;
-  const clear=f.run.time>9.9;f.start();const reset=f.run.time===0&&f.obstacles.countActive()===0&&f.nextSpecial==='dj';
-  f.game.loop.wake();return {actualPickup,actualHit,clockMatch:Math.abs(t60-t30)<.001,stillBoost,expired,clear,reset};
+  const clear=f.run.time>9.9;f.start();const reset=f.run.time===0&&f.obstacles.countActive()===0&&f.items.countActive()>70;
+  f.game.loop.wake();return {actualPickup,clockMatch:Math.abs(t60-t30)<.001,stillBoost,expired,clear,reset};
  });
- expect(result).toEqual({actualPickup:true,actualHit:true,clockMatch:true,stillBoost:true,expired:true,clear:true,reset:true});
+ expect(result).toEqual({actualPickup:true,clockMatch:true,stillBoost:true,expired:true,clear:true,reset:true});
 });
-test('DJ animation/refill, paused effects, shield burst and item order',async({page})=>{
+test('DJ animation/refill, paused effects, shield burst and world pickups',async({page})=>{
  await page.goto('http://127.0.0.1:5173');await page.waitForFunction(()=>Boolean((window as any).forest));await page.locator('#start').click();
  const result=await page.evaluate(()=>{
   const f=(window as any).forest;f.game.loop.sleep();f.run.god=true;
   const step=(n:number)=>{for(let i=0;i<n;i++)f.update(0,1000/60)};
   const dj=()=>f.pickup(f.spawnItem('dj'));
-  dj();const fromSky=f.performer.y<0;step(80);const arrived=f.performer.y>70&&f.performer.y<90;
+  dj();const fromSky=f.performer.y<f.player.y-300;step(80);const arrived=Math.abs(f.performer.y-(f.player.y-218))<12;
   const frame=JSON.stringify(f.djMotion.commandBuffer);step(8);const animates=JSON.stringify(f.djMotion.commandBuffer)!==frame;
   const age=f.djTime;f.run.shield=1;dj();const refills=f.run.shield===3&&f.djTime===age;
   f.run.boost=10;f.togglePause();const frozen=[f.run.time,f.djTime,f.run.boost,f.cooldown];step(120);
   const pauses=JSON.stringify(frozen)===JSON.stringify([f.run.time,f.djTime,f.run.boost,f.cooldown]);f.togglePause();
   for(let i=0;i<3;i++)f.collide(f.obstacles.create(700,270,'baby'));
   const bursts=f.shieldBurst>0&&!f.performer.visible;step(41);const burstEnds=f.shieldBurst===0;
-  f.start();f.run.god=true;f.cooldown=999;const kinds:string[]=[];const original=f.spawnItem.bind(f);
-  f.spawnItem=(kind:string)=>{kinds.push(kind);return original(kind)};step(1600);
-  const specials=kinds.filter(k=>k!=='light');const alternating=specials[0]==='dj'&&specials[1]==='power'&&specials[2]==='dj';
+  f.start();const kinds=f.items.getChildren().map((o:any)=>o.kind);const specials=kinds.filter((k:string)=>k!=='light');const alternating=specials[0]==='dj'&&specials[1]==='power'&&specials[2]==='dj';
   f.game.loop.wake();return {fromSky,arrived,animates,refills,pauses,bursts,burstEnds,alternating};
  });
  expect(result).toEqual({fromSky:true,arrived:true,animates:true,refills:true,pauses:true,bursts:true,burstEnds:true,alternating:true});

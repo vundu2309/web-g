@@ -11,15 +11,14 @@ test('quality settings resize the renderer, reduce fog and persist',async({page}
  expect(await page.evaluate(()=>{const f=(window as any).forest;return f.quality==='high'&&f.fog.every((layer:any)=>layer.visible)&&f.cameras.main.zoom===2})).toBeTruthy();
  expect(await page.evaluate(()=>(window as any).forest.run.time)).toBe(before);await page.locator('#done-settings').click();await page.locator('#resume').click();expect(await page.evaluate(()=>(window as any).forest.status)).toBe('play');
 });
-test('sprite atlas has distinct run, jump, landing, pickup and Enemy poses',async({page})=>{
+test('sprite atlas has distinct run, jump, landing, pickup poses',async({page})=>{
  await ready(page);await page.locator('#start').click();const result=await page.evaluate(()=>{
   const f=(window as any).forest;f.game.loop.sleep();f.run.god=true;f.cooldown=999;f.itemTime=999;const step=(n:number)=>{for(let i=0;i<n;i++)f.update(0,1000/60)};step(12);
   const atlas=f.textures.get('player-atlas');const frames=['run0','run7','jump','fall','land','pickup'].every(name=>atlas.has(name));
   f.jump();step(1);const jumping=f.player.frame.name==='jump';let landing=false;for(let i=0;i<70;i++){step(1);if(f.player.frame.name==='land')landing=true}
   f.pickup(f.spawnItem('light'));step(1);const pickup=f.player.frame.name==='pickup';
-  f.windup=.4;step(1);const hold=f.enemy.frame.name==='hold';f.windup=.001;step(1);const release=f.enemy.frame.name==='release';
-  const fourLayers=f.layers.length===4;f.game.loop.wake();return {frames,jumping,landing,pickup,hold,release,fourLayers};
- });expect(result).toEqual({frames:true,jumping:true,landing:true,pickup:true,hold:true,release:true,fourLayers:true});
+  const fourLayers=f.layers.length===4;f.game.loop.wake();return {frames,jumping,landing,pickup,fourLayers};
+ });expect(result).toEqual({frames:true,jumping:true,landing:true,pickup:true,fourLayers:true});
 });
 test('particles and floating labels are bounded, freeze on pause and reset',async({page})=>{
  await ready(page);await page.locator('#start').click();const result=await page.evaluate(()=>{
