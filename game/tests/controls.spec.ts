@@ -30,3 +30,11 @@ test('touch controls support holding direction while jumping and release cleanly
  expect(await page.evaluate(()=>(window as any).forest.touchDirections.size)).toBe(1);
  await page.mouse.move(0,0);await page.mouse.up();expect(await page.evaluate(()=>(window as any).forest.touchDirections.size)).toBe(0);
 });
+
+for(const viewport of [{width:390,height:844},{width:844,height:390}])test(`console controls have separated thumb zones ${viewport.width}x${viewport.height}`,async({page})=>{
+ await page.setViewportSize(viewport);await page.goto('http://127.0.0.1:5173');await page.waitForFunction(()=>Boolean((window as any).forest));await page.locator('#start').click();
+ const left=(await page.locator('#left').boundingBox())!,right=(await page.locator('#right').boundingBox())!,jump=(await page.locator('#jump').boundingBox())!,pause=(await page.locator('#pause').boundingBox())!;
+ expect(right.x+right.width).toBeLessThan(viewport.width/2+5);expect(jump.x).toBeGreaterThan(viewport.width/2);expect(left.width).toBeGreaterThanOrEqual(60);expect(jump.height).toBeGreaterThanOrEqual(76);expect(pause.y+pause.height).toBeLessThan(100);
+ await page.keyboard.down('ArrowRight');await expect(page.locator('#right')).toHaveClass(/held/);await page.keyboard.up('ArrowRight');await expect(page.locator('#right')).not.toHaveClass(/held/);
+ await page.locator('#pause').click();await expect(page.locator('#pause-menu')).toBeVisible();await expect(page.locator('#pause')).toHaveAttribute('aria-label','Tiếp tục game');await page.locator('#resume').click();await expect(page.locator('#pause')).toHaveAttribute('aria-label','Tạm dừng game');
+});

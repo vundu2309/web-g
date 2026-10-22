@@ -16,4 +16,19 @@ dialog::backdrop{background:#070c1bcc;backdrop-filter:blur(4px)}body[data-qualit
 @media(max-height:500px){article{padding:18px 28px;max-width:410px}.forest-crest{display:none}h1{font-size:30px;margin:12px 0;line-height:1.02}#chapter{top:61px}article small{font-size:8px}.quality-setting{padding:12px 0}}
 article{width:min(410px,calc(100vw - 32px))}
 
-#left,#right,#jump{touch-action:none;user-select:none;-webkit-user-select:none}#left,#right{min-width:52px;font-size:20px}footer #jump{min-width:88px}@media(max-width:600px){footer{gap:5px}footer button{padding:10px}footer #jump{min-width:72px}}
+/* Console controls: two thumb zones keep the world unobstructed. */
+#game-actions{position:fixed;top:max(16px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));display:flex;gap:8px;z-index:4}
+#game-actions button{width:44px;height:44px;min-height:44px;padding:0;display:grid;place-items:center;border-radius:50%;background:#142238d9;color:#e1d7bc;font-size:21px;box-shadow:inset 0 1px #ffffff13,0 4px 14px #03091640}
+header{right:140px}#chapter{right:140px}#effects{margin-left:auto}#best{display:none}
+#controller{position:fixed;inset:auto max(30px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(30px,env(safe-area-inset-left));display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:nowrap;pointer-events:none;z-index:3}
+.direction-pad{display:flex;gap:14px;padding:8px;border:1px solid #b9c6da18;border-radius:50px;background:#0e192a40}
+#controller .game-button{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;border-radius:50%;background:#21344cba;color:#e6edf2;border:2px solid #b7c9dd66;box-shadow:inset 0 2px #f2f6ff1c,inset 0 -5px #06101e40,0 5px 20px #03091744;transition:transform .08s,background .08s,border-color .08s}
+#controller .direction-button{width:76px;height:76px;min-width:76px;min-height:76px}
+#controller .jump-button{width:94px;height:94px;min-width:94px;min-height:94px;background:#d9bf85e0;color:#1a2b3f;border-color:#f4dfae;box-shadow:inset 0 2px #fff6dc88,inset 0 -6px #78623a40,0 5px 22px #03091755}
+.game-button svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.jump-button span{font-size:10px;font-weight:700;letter-spacing:1px;margin-top:2px}.game-button kbd{font:9px ui-monospace,monospace;opacity:.6;margin-top:3px}
+#controller .game-button:active,#controller .game-button.held{transform:translateY(3px) scale(.95);background:#49647be6;border-color:#e0edf8;box-shadow:inset 0 3px 8px #06101e66}#controller .jump-button:active{background:#f2dca4;color:#1a2b3f}
+#welcome{z-index:5}
+@media(pointer:coarse){.game-button kbd{display:none}}
+@media(max-width:600px){header{right:116px;top:max(12px,env(safe-area-inset-top))}#effects{display:none}#game-actions{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));gap:6px}#game-actions button{width:44px;height:44px;min-height:44px}#chapter{top:max(65px,calc(env(safe-area-inset-top) + 56px));left:12px;right:auto;max-width:calc(100vw - 24px);letter-spacing:.3px}#powers{top:90px}#controller{left:max(16px,env(safe-area-inset-left));right:max(20px,env(safe-area-inset-right));bottom:max(26px,env(safe-area-inset-bottom))}.direction-pad{gap:10px;padding:6px}#controller .direction-button{width:64px;height:64px;min-width:64px;min-height:64px}#controller .jump-button{width:82px;height:82px;min-width:82px;min-height:82px}.game-button kbd{display:none}}
+@media(max-height:500px){#controller{bottom:max(14px,env(safe-area-inset-bottom));left:max(22px,env(safe-area-inset-left));right:max(24px,env(safe-area-inset-right))}#controller .direction-button{width:60px;height:60px;min-width:60px;min-height:60px}#controller .jump-button{width:76px;height:76px;min-width:76px;min-height:76px}.game-button kbd{display:none}.direction-pad{padding:5px;gap:10px}}
+@media(prefers-reduced-motion:reduce){#controller .game-button{transition:none}}

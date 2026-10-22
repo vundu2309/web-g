@@ -74,20 +74,20 @@ class Forest extends Phaser.Scene{
   this.applyQuality(this.quality,false);
   const keyboard=(event:KeyboardEvent)=>{
    if(this.settingsMenu.open||this.pauseMenu.open){if(event.code!=='KeyP')return}
-   if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(event.code)){event.preventDefault();if(this.status==='play')this.keys.add(event.code);return}
+   if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(event.code)){event.preventDefault();if(this.status==='play')this.keys.add(event.code);this.syncControlButtons();return}
    if(event.repeat||this.settingsMenu.open)return;
    if(event.code==='KeyP'){event.preventDefault();this.togglePause();return}
    if(this.pauseMenu.open)return;
    if(event.code==='Space'||event.code==='ArrowUp'||event.code==='KeyW'){event.preventDefault();this.jump()}
   };
   document.addEventListener('keydown',keyboard);
-  const keyup=(event:KeyboardEvent)=>this.keys.delete(event.code);
+  const keyup=(event:KeyboardEvent)=>{this.keys.delete(event.code);this.syncControlButtons()};
   const clearControls=()=>this.clearControls();
   document.addEventListener('keyup',keyup);window.addEventListener('blur',clearControls);
   for(const [id,direction] of [['left',-1],['right',1]] as const){
    const button=$(id);
-   button.onpointerdown=event=>{event.preventDefault();if(this.status!=='play')return;button.setPointerCapture(event.pointerId);this.touchDirections.set(event.pointerId,direction)};
-   const release=(event:PointerEvent)=>this.touchDirections.delete(event.pointerId);
+   button.onpointerdown=event=>{event.preventDefault();if(this.status!=='play')return;button.setPointerCapture(event.pointerId);this.touchDirections.set(event.pointerId,direction);button.classList.add('held')};
+   const release=(event:PointerEvent)=>{this.touchDirections.delete(event.pointerId);button.classList.remove('held')};
    button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
   }
   $('start').onclick=()=>this.start();$('jump').onpointerdown=event=>{event.preventDefault();this.jump()};$('jump').onclick=event=>{if(event.detail===0)this.jump()};$('pause').onclick=()=>this.togglePause();
@@ -191,18 +191,20 @@ class Forest extends Phaser.Scene{
  }
  musicLabel(){const audio=this.audio;$('music').textContent=audio.failed?'Thử lại':audio.blocked&&audio.enabled?'Chạm để phát':audio.enabled?'Bật':'Tắt';$('music').setAttribute('aria-pressed',String(audio.enabled))}
  syncAudio(){if(this.status==='pause'){this.audio.pause();return}this.audio.sync(this.status==='play'&&this.run.shield>0)}
- clearControls(){this.keys.clear();this.touchDirections.clear();this.player?.setVelocityX(0)}
+ syncControlButtons(){for(const [id,codes] of [['left',['ArrowLeft','KeyA']],['right',['ArrowRight','KeyD']]] as const)$(id).classList.toggle('held',codes.some(code=>this.keys.has(code))||[...this.touchDirections.values()].includes(id==='left'?-1:1))}
+ clearControls(){this.keys.clear();this.touchDirections.clear();for(const id of ['left','right','jump'])$(id).classList.remove('held');this.player?.setVelocityX(0)}
  start(){
   this.clearControls();
   this.settingsMenu.close();this.pauseMenu.close();this.clearFeedback();this.audio.unlock();this.run=newRun(this.run.god);this.accumulator=0;this.djTime=0;this.shieldFlash=this.shieldBurst=0;this.landing=this.pickupFlash=this.entryPulse=this.trailTime=0;this.wasGrounded=false;
   this.items.clear(true,true);this.obstacles.clear(true,true);this.player.setPosition(122,groundAt(122)-1).setVelocity(0).setFrame('run0');
   this.performer.setPosition(572,-115).setVisible(false);this.djGlow.setVisible(false);this.fx.clear();
-  this.status='play';this.centerCamera();this.populateMap();this.physics.resume();$('welcome').hidden=true;$('pause').textContent='Ⅱ Tạm dừng';this.syncAudio();this.drawEffects();this.refreshHUD();
+  this.status='play';this.centerCamera();this.populateMap();this.physics.resume();$('welcome').hidden=true;this.pauseButton(false);this.syncAudio();this.drawEffects();this.refreshHUD();
  }
  jump(){if(this.status==='ready'||this.status==='over'){this.start();return}if(this.status==='play'&&(this.player.body as Phaser.Physics.Arcade.Body).blocked.down)this.player.setVelocityY(-720)}
+ pauseButton(paused:boolean){const button=$('pause');button.innerHTML='<span aria-hidden="true">'+(paused?'▶':'Ⅱ')+'</span>';button.setAttribute('aria-label',paused?'Tiếp tục game':'Tạm dừng game');button.setAttribute('title',paused?'Tiếp tục (P)':'Tạm dừng (P)')}
  togglePause(){
-  if(this.status==='play'){this.clearControls();this.status='pause';this.physics.pause();$('pause').textContent='▶ Tiếp tục'}
-  else if(this.status==='pause'){this.status='play';this.accumulator=0;this.physics.resume();$('pause').textContent='Ⅱ Tạm dừng'}
+  if(this.status==='play'){this.clearControls();this.status='pause';this.physics.pause();this.pauseButton(true)}
+  else if(this.status==='pause'){this.status='play';this.accumulator=0;this.physics.resume();this.pauseButton(false)}
   this.syncAudio();this.syncPauseMenu();this.refreshHUD();
  }
  pickup(item:Item){
