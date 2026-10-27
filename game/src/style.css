@@ -8,3 +8,7 @@
 @import './ui/styles/inventory.css';
 @import './ui/styles/feedback.css';
 @import './ui/styles/responsive.css';
+@import './ui/styles/compact.css';
+@import './ui/styles/compact-inventory.css';
+
+@import './ui/styles/aquatic.css';

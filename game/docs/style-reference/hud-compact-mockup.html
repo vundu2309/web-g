@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pixel Forest · Phác thảo HUD gọn</title>
+    <link rel="stylesheet" href="../../src/ui/styles/fonts.css" />
+    <link rel="stylesheet" href="../../src/ui/styles/tokens.css" />
+    <link rel="stylesheet" href="./hud-compact-panels.css" />
+    <link rel="stylesheet" href="./hud-compact.css" />
+  </head>
+  <body>
+    <!-- Cảnh tĩnh và sprite thật. Mockup độc lập, không nạp Phaser hoặc thay đổi bản lưu. -->
+    <picture class="scene" aria-hidden="true">
+      <source media="(max-width: 600px)" srcset="./hud-compact-assets/scene-mobile.png" />
+      <img src="./hud-compact-assets/scene-desktop.png" alt="" />
+    </picture>
+    <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <symbol id="px-wood" viewBox="0 0 16 16">
+        <path fill="#a77a4b" d="M2 6h12v7H2zM5 3h9v3H5z" />
+        <path fill="#e8c98b" d="M2 6h3v7H2zM5 3h3v3H5z" />
+        <path fill="#6c4b32" d="M7 8h6v1H7zM9 11h5v1H9z" />
+      </symbol>
+      <symbol id="px-stone" viewBox="0 0 16 16">
+        <path fill="#7f9589" d="M5 2h6v2h2v3h2v7H1V8h2V4h2z" />
+        <path fill="#c4d2b4" d="M5 3h5v2H5zM3 6h2v4H3z" />
+      </symbol>
+      <symbol id="px-bag" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M5 1h6v2h2v3h1v9H2V6h1V3h2zm1 2v2h4V3zm-2 5v5h8V8z" />
+      </symbol>
+      <symbol id="px-tent" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M7 1h2v2h1v2h1v2h1v2h1v2h1v2h1v2H1v-2h1v-2h1V9h1V7h1V5h1V3h1z" />
+        <path fill="#354e3c" d="M7 7h2v2h1v2h1v3H5v-3h1V9h1z" />
+      </symbol>
+      <symbol id="px-fish" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M1 4h2v2h2V4h6v1h2v2h2v3h-2v2h-2v1H5v-2H3v2H1z" />
+        <path fill="#273d32" d="M11 7h1v1h-1z" />
+      </symbol>
+      <symbol id="px-pin" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M4 1h8v2h2v7h-2v2h-2v2H9v2H7v-2H6v-2H4v-2H2V3h2z" />
+        <path fill="#354e3c" d="M6 4h4v4H6z" />
+      </symbol>
+      <symbol id="px-hand" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M6 1h2v6h1V4h2v3h1V5h2v7h-2v3H6v-2H4v-2H2V8h2v1h2z" />
+      </symbol>
+      <symbol id="px-gear" viewBox="0 0 16 16">
+        <path
+          fill="currentColor"
+          d="M6 0h4v3h2V2h2v2h-1v2h3v4h-3v2h1v2h-2v-1h-2v3H6v-3H4v1H2v-2h1v-2H0V6h3V4H2V2h2v1h2z"
+        />
+        <path fill="#354e3c" d="M6 5h4v1h1v4h-1v1H6v-1H5V6h1z" />
+      </symbol>
+      <symbol id="px-pause" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M3 2h4v12H3zM10 2h4v12h-4z" />
+      </symbol>
+      <symbol id="px-jump" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M7 1h2v2h2v2h2v2h2v2h-4V7H9v8H7V7H5v2H1V7h2V5h2V3h2z" />
+      </symbol>
+      <symbol id="px-left" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M7 2h3v2H8v2H6v1h8v3H6v1h2v2h2v2H7v-2H5v-2H3V9H1V7h2V5h2V3h2z" />
+      </symbol>
+      <symbol id="px-right" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M6 2h3v1h2v2h2v2h2v2h-2v2h-2v2H9v2H6v-2h2v-2h2v-1H2V7h8V6H8V4H6z" />
+      </symbol>
+      <symbol id="px-sun" viewBox="0 0 16 16">
+        <path
+          d="M6 4h4v1h1v1h1v4h-1v1h-1v1H6v-1H5v-1H4V6h1V5h1zM7 0h2v2H7zM7 14h2v2H7zM0 7h2v2H0zM14 7h2v2h-2zM2 2h2v2H2zM12 2h2v2h-2zM2 12h2v2H2zM12 12h2v2h-2z"
+        />
+      </symbol>
+    </svg>
+    <header class="hud-top">
+      <nav class="hotbar" aria-label="Truy cập nhanh">
+        <button class="slot" data-panel="inventory" aria-label="Kho đồ" aria-expanded="false" title="Kho đồ (I)">
+          <kbd>I</kbd><svg class="icon"><use href="#px-bag" /></svg>
+        </button>
+        <button class="slot" data-panel="build" aria-label="Dựng trại" aria-expanded="false" title="Dựng trại (B)">
+          <kbd>B</kbd><svg class="icon"><use href="#px-tent" /></svg>
+        </button>
+      </nav>
+      <div class="corner">
+        <span class="clock" aria-label="Giờ trong game: 08 giờ">
+          <svg class="icon"><use href="#px-sun" /></svg><time>08:00</time>
+        </span>
+        <button class="slot" data-panel="menu" aria-label="Menu tạm dừng" aria-expanded="false" title="Menu (Esc)">
+          <svg class="icon"><use href="#px-pause" /></svg>
+        </button>
+      </div>
+    </header>
+    <div class="context"><kbd>E</kbd><span>Câu cá</span></div>
+    <div class="region" hidden>Ao Sen</div>
+    <nav class="touch" aria-label="Điều khiển cảm ứng mẫu">
+      <div class="move">
+        <button class="touch-key" aria-label="Di chuyển trái">
+          <svg class="icon"><use href="#px-left" /></svg>
+        </button>
+        <button class="touch-key" aria-label="Di chuyển phải">
+          <svg class="icon"><use href="#px-right" /></svg>
+        </button>
+      </div>
+      <div class="actions">
+        <button class="touch-key interact" aria-label="Câu cá">
+          <svg class="icon"><use href="#px-fish" /></svg><span>Câu cá</span>
+        </button>
+        <button class="touch-key" aria-label="Nhảy">
+          <svg class="icon"><use href="#px-jump" /></svg>
+        </button>
+      </div>
+    </nav>
+    <dialog class="panel" aria-labelledby="panel-title">
+      <header class="panel-heading">
+        <div>
+          <small>ĐANG TẠM DỪNG</small>
+          <h1 id="panel-title">Kho đồ</h1>
+        </div>
+        <button class="close" aria-label="Đóng bảng">×</button>
+      </header>
+      <div id="panel-content"></div>
+    </dialog>
+    <template id="inventory">
+      <nav class="tabs" aria-label="Danh mục kho đồ">
+        <button data-tab="materials" aria-pressed="true">Vật liệu</button>
+        <button data-tab="equipment" aria-pressed="false">Trang bị</button>
+        <button data-tab="fish" aria-pressed="false">Cá</button>
+      </nav>
+      <div class="inventory-body"></div>
+      <p class="panel-note">Chọn một ô để xem chi tiết.</p>
+    </template>
+    <template id="build">
+      <p class="materials">
+        <svg class="icon"><use href="#px-wood" /></svg>24 <svg class="icon"><use href="#px-stone" /></svg>16
+      </p>
+      <div class="blueprints">
+        <button data-item="Lều vải · 8 gỗ, 2 đá">
+          <img src="./hud-compact-assets/tent.png" alt="" /><b>Lều vải</b><span>8 gỗ · 2 đá</span>
+        </button>
+        <button data-item="Bếp lửa · xem công thức trong game">
+          <img src="./hud-compact-assets/fire.png" alt="" /><b>Bếp lửa</b><span>Nấu ăn, sưởi ấm</span>
+        </button>
+        <button data-item="Rương gỗ · xem công thức trong game">
+          <img src="./hud-compact-assets/chest.png" alt="" /><b>Rương gỗ</b><span>Cất giữ vật phẩm</span>
+        </button>
+        <button data-item="Đèn lồng · 3 gỗ, 1 đá">
+          <img src="./hud-compact-assets/lantern.png" alt="" /><b>Đèn lồng</b><span>3 gỗ · 1 đá</span>
+        </button>
+      </div>
+      <p class="panel-note">Chọn công trình để xem công thức.</p>
+    </template>
+    <template id="menu">
+      <div class="menu-actions">
+        <button class="resume">Tiếp tục</button>
+        <button data-demo="settings">Cài đặt</button>
+        <button data-demo="region">Xem tên vùng</button>
+      </div>
+      <p class="panel-note">Tiến trình được lưu trên thiết bị này.</p>
+    </template>
+    <script type="module" src="./hud-compact.js"></script>
+  </body>
+</html>

@@ -8,15 +8,20 @@ Chỉ thực hiện yêu cầu được giao, giữ nguyên hành vi ngoài ph�
 
 ## Bản đồ source
 
-- `src/data/`: catalog trang bị/cá/công thức và dữ liệu địa hình, vùng, tài nguyên.
-- `src/domain/`: kiểu Save, làm sạch bản lưu, luật trang bị, cá và vật liệu thuần.
+- `src/data/`: catalog, địa hình, vùng, tài nguyên; `palette.ts` và `palette/` là nguồn màu TS.
+- `src/data/sprites/structures/`: chín công trình 55×37, tách thân và phần phát sáng.
+- `src/domain/`: Save, làm sạch dữ liệu, luật trang bị, cá/vật liệu thuần.
+- `src/domain/tilemap/`, `lighting/`, `backdrop/`, `vegetation/`: lưới ô, trường sáng, nền và thực vật.
+- `src/domain/camperRig/`: bộ xương 36×48, pose, neo và hình dáng trang bị; `tone.ts` suy tông.
 - `src/game/CampingScene.ts`: điều phối scene, camera, physics và lệnh gameplay.
 - `src/game/systems/`: FishingSystem và ConstructionSystem, không phụ thuộc UI.
-- `src/game/rendering/`: asset/cache, world, hiệu ứng, độ phân giải và DPI.
+- `src/game/rendering/`: asset/cache, world, hiệu ứng, độ phân giải/DPI; ba camera:
+  nền depth âm / thế giới chiếu sáng 0–20 / hiệu ứng không chiếu sáng từ 21.
+- `src/ui/styleguide*.ts`, `gallery.ts`: trang xem mẫu chỉ DEV (`?styleguide`, `?gallery`).
 - `src/ui/GameUI.ts`, `src/ui/styles/`: DOM, menu, HUD và CSS chia theo trách nhiệm.
 - `src/input/`: phím, pointer và vòng đời listener.
 - `src/storage/`: repository local và lựa chọn đồ họa.
-- `src/camp-art.ts`, `src/night-art.ts`: vẽ sprite và cây cỏ bằng canvas.
+- `src/camp-art.ts`: art legacy còn giữ; không thêm logic gameplay vào đây.
 - `src/firebase.ts`: cấu hình/khởi tạo Firebase hiện có, không tự thay đổi.
 - `src/camping.ts`, `src/world.ts`: entry legacy/re-export chồng với
   `domain/`, `data/`, `game/`; **hợp nhất sau, không thêm code mới vào nơi trùng**.
@@ -31,7 +36,7 @@ Không dọn cấu trúc chồng lặp hoặc nối lại system ngoài nhiệm 
 ## Lệnh
 
 - **`npm run check` là cửa kiểm tra duy nhất trước khi báo hoàn tất**:
-  format → lint → typecheck → mọi unit test, dừng ở lỗi đầu tiên.
+  format → ESLint → `lint:css` (stylelint) → typecheck → mọi unit test; dừng ở lỗi đầu tiên.
 - `npm run format`: định dạng; `npm run lint -- --fix`: sửa lint tự động.
 - `npm run test:e2e`: build và kiểm tra luồng trình duyệt (Chrome macOS theo config).
 - `npm run dev`: chạy local; `npm run build`: kiểm kiểu, build và tạo cache PWA.
@@ -67,10 +72,24 @@ Không dọn cấu trúc chồng lặp hoặc nối lại system ngoài nhiệm 
   Không tăng nợ trong những file đang được hạ xuống warn.
 - Không tự commit, push, deploy hoặc git init; làm theo ủy quyền của người dùng.
 
+## Giao diện và phong cách
+
+Đọc `docs/STYLE.md` (art, palette, camera, ví dụ chuẩn vàng) và `docs/DESIGN.md` (UI/UX, token,
+trạng thái, bàn phím, responsive) trước khi sửa giao diện. Kiểm kê nền ở `docs/STYLE-INVENTORY.md`.
+
+- Màu TS chỉ từ palette; CSS chỉ dùng token cho màu/chữ/kích thước mỹ thuật/tầng/bóng.
+- Không gradient CSS, blur shadow hay góc tròn; ngoại lệ đóng được ghi trong STYLE/DESIGN.
+- Vật thể ở đúng camera; công trình tự sáng tách thân và glow; animation game theo clock game.
+- Theo ví dụ chuẩn vàng, xem `?styleguide` và `?gallery`; không đưa trang mẫu vào production.
+- Chạy `npm run check`; kiểm hình ảnh khi sửa hình ảnh, không tự đổi palette để sửa nợ tương phản.
+- Giá trị cấu trúc/media/font descriptor và icon SVG nhiều tông là ngoại lệ có tài liệu.
+
 ## Phạm vi chưa có
 
 Đã có bán cá, nấu ăn, cần câu, rương độc lập và ngày/đêm trong Save v2.
-Chưa có đồng bộ cloud, ngủ tua giờ hoặc mồi câu; không tự bổ sung nếu chưa được yêu cầu.
+Tài khoản username/mật khẩu, đồng bộ đám mây và multiplayer theo phòng đang lên kế hoạch, chưa hiện thực.
+Chưa có ngủ tua giờ hoặc mồi câu. T8b (nước/thác/cổng vòm và hiệu ứng hoạt động) chưa làm.
+Không tự bổ sung các mục này nếu chưa được yêu cầu.
 
 ## Báo cáo
 

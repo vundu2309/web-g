@@ -1,0 +1,156 @@
+/* Bảng mở theo yêu cầu; dùng chung palette và token với mockup. */
+.panel {
+  position: fixed;
+  inset: var(--size-60) auto auto var(--mock-inset);
+  margin: 0;
+  width: var(--mock-panel);
+  max-width: calc(100vw - var(--space-24));
+  max-height: calc(100dvh - var(--size-96));
+  padding: var(--space-12);
+  border: var(--mock-line);
+  box-shadow: var(--mock-shadow);
+  color: var(--ink);
+  background: var(--paper);
+  overflow: auto;
+}
+.panel::backdrop {
+  background: var(--overlay-welcome);
+}
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-8);
+  margin-bottom: var(--space-10);
+  border-bottom: var(--pixel-2) solid var(--moss);
+}
+.panel-heading h1 {
+  margin: 0;
+  font-size: var(--text-18);
+  font-weight: var(--weight-900);
+}
+.panel-heading small {
+  font-size: var(--text-9);
+  letter-spacing: var(--space-1);
+}
+.close {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 0;
+  background: transparent;
+  font-size: var(--text-fixed-24);
+  color: var(--ink);
+}
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
+}
+.tabs button {
+  min-height: var(--tap-min);
+  padding: var(--space-6);
+  border: var(--mock-line);
+  background: var(--surface-gear);
+  color: var(--ink);
+  font-size: var(--text-12);
+}
+.tabs [aria-pressed='true'] {
+  color: var(--cream);
+  background: var(--pine);
+}
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.item {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: var(--pixel-2) solid var(--moss);
+  color: var(--ink);
+  background: var(--surface-gear);
+}
+.item b {
+  position: absolute;
+  bottom: 0;
+  right: var(--space-3);
+  font-size: var(--text-11);
+}
+.item[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--gold);
+}
+.panel-note {
+  min-height: var(--space-20);
+  margin: var(--space-12) 0 0;
+  font-size: var(--text-12);
+  color: var(--ink);
+}
+.equipment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+.equipment img {
+  width: var(--mock-figure-w);
+  height: var(--mock-figure-h);
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.equipment p {
+  margin: var(--space-4) 0;
+  font-size: var(--text-12);
+}
+.materials {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-10);
+  font-variant-numeric: tabular-nums;
+}
+.blueprints {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.blueprints button {
+  display: grid;
+  justify-items: center;
+  padding: var(--space-8) var(--space-4);
+  border: var(--pixel-2) solid var(--moss);
+  color: var(--ink);
+  background: var(--surface-gear);
+}
+.blueprints img {
+  width: var(--mock-prop-w);
+  height: var(--mock-prop-h);
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.blueprints b {
+  margin-top: var(--space-4);
+  font-size: var(--text-12);
+}
+.blueprints span {
+  font-size: var(--text-10);
+}
+.menu-actions {
+  display: grid;
+  gap: var(--space-8);
+}
+.menu-actions button {
+  min-height: var(--tap-min);
+  border: var(--mock-line);
+  padding: var(--space-8);
+  background: var(--pine);
+  color: var(--cream);
+}
+.menu-actions .resume {
+  background: var(--gold);
+  color: var(--ink);
+}

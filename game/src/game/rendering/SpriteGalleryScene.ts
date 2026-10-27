@@ -1,29 +1,13 @@
 import Phaser from 'phaser';
-import {camperSprite} from '../../data/sprites/camper';
-import {camperDetailed} from '../../data/sprites/camperDetailed';
-import {reviewOutfits, outfitColors} from '../../data/sprites/outfits';
-import {buildingSprites} from '../../data/sprites/buildings';
+import {buildingGlows, buildingSprites} from '../../data/sprites/buildings';
 import {woodSprite, stoneSprite} from '../../data/sprites/resources';
 import {palette, colorNumber} from '../../data/palette';
-import type {PoseName} from '../../domain/poseMachine';
 import type {SpriteDefinition} from '../../domain/sprite';
-import {loadSprite, ART_PIXEL} from './SpriteLoader';
+import {loadSprite} from './SpriteLoader';
 import {ClockSprite} from './ClockSprite';
-export const poseNames = Object.keys(camperSprite.animations) as PoseName[];
-export const poseLabels: Record<string, string> = {
-  idle: 'Đứng · thở nhẹ',
-  run: 'Chạy · tay và balo đung đưa',
-  jump: 'Nhảy · lên',
-  fall: 'Rơi',
-  land: 'Đáp · bụi',
-  cast: 'Quăng cần',
-  'fish-wait': 'Chờ cá cắn',
-  bite: 'Cá cắn · giật cần',
-  reel: 'Kéo cá',
-  gather: 'Nhặt gỗ · đá',
-  build: 'Dựng trại',
-};
-export type GalleryMode = 'camper' | 'props';
+
+export type GalleryLayer = 'both' | 'body' | 'glow';
+
 const propLabels: Record<string, string> = {
   tent: 'Lều vải',
   fire: 'Bếp lửa',
@@ -37,151 +21,156 @@ const propLabels: Record<string, string> = {
   wood: 'Gỗ khô',
   stone: 'Đá',
 };
-const propDefs: [string, SpriteDefinition][] = [
-  ...(Object.entries(buildingSprites) as [string, SpriteDefinition][]),
-  ['wood', woodSprite],
-  ['stone', stoneSprite],
-];
-/** Layout shared with the DOM host: camper cells are 300 px tall, prop cells 240 px. */
-export function galleryLayout(mode: GalleryMode, width: number) {
-  const columns =
-    mode === 'camper' ? (width >= 720 ? 3 : width >= 440 ? 2 : 1) : width >= 900 ? 4 : width >= 560 ? 3 : 2;
-  const count = mode === 'camper' ? 6 : propDefs.length;
-  const cell = mode === 'camper' ? 300 : 240;
-  return {columns, cellWidth: Math.floor(width / columns), cell, height: Math.ceil(count / columns) * cell};
+
+interface Prop {
+  kind: string;
+  body: SpriteDefinition;
+  glow?: SpriteDefinition;
 }
-interface Cell {
+
+const propDefs: Prop[] = [
+  ...(Object.entries(buildingSprites) as [string, SpriteDefinition][]).map(([kind, body]) => ({
+    kind,
+    body,
+    glow: buildingGlows[kind as keyof typeof buildingGlows],
+  })),
+  {kind: 'wood', body: woodSprite},
+  {kind: 'stone', body: stoneSprite},
+];
+
+const CELL_PAD = 42;
+const GROUND_PAD = 42;
+
+/** Layout shared with the DOM host: a prop cell fits the sprite at the chosen zoom, with a label above it. */
+export function galleryLayout(width: number, zoom = 3) {
+  const artHeight = 37 * zoom;
+  const columns = zoom >= 6 ? (width >= 900 ? 3 : 1) : width >= 900 ? 4 : width >= 560 ? 3 : 2;
+  const cell = Math.max(240, artHeight + CELL_PAD + GROUND_PAD);
+  return {columns, cellWidth: Math.floor(width / columns), cell, height: Math.ceil(propDefs.length / columns) * cell};
+}
+
+interface Layer {
+  kind: 'body' | 'glow';
   clip: ClockSprite;
   sprite: Phaser.GameObjects.Sprite;
   texture: string;
   animation: string;
-  pose: PoseName;
-  row: number;
 }
+
+interface Cell {
+  layers: Layer[];
+}
+
+/** Xưởng pixel: công trình (thân, lớp phát sáng, ghép) và tài nguyên cùng lưới pixel. */
 export class SpriteGalleryScene extends Phaser.Scene {
   clock = 0;
   speed = 1;
   paused = false;
-  state: PoseName | 'all' = 'all';
-  outfit = 0;
-  detailed = true;
-  mode: GalleryMode = 'camper';
-  /** Called when a mode change needs a taller host; the DOM owns the page height. */
+  zoom = 3;
+  layer: GalleryLayer = 'both';
+  night = false;
+  /** Called when the layout changes height; the DOM owns the page height. */
   onLayout?: (height: number) => void;
   cells: Cell[] = [];
   private built: Phaser.GameObjects.GameObject[] = [];
-  private labels: Phaser.GameObjects.Text[] = [];
+
   constructor() {
     super('sprite-review');
   }
+
   create() {
     this.build();
     Object.assign(window, {spriteGallery: this});
   }
-  private definition() {
-    return this.detailed ? camperDetailed : camperSprite;
-  }
-  /** Rebuilds all cells for the current mode; cached textures and animations are reused. */
+
+  /** Rebuilds all prop cells; cached textures and animations are reused. */
   build() {
     for (const object of this.built) object.destroy();
     this.built = [];
-    this.labels = [];
     this.cells = [];
-    const layout = galleryLayout(this.mode, this.scale.width);
+    const layout = galleryLayout(this.scale.width, this.zoom);
     if (this.scale.height !== layout.height) this.scale.resize(this.scale.width, layout.height);
     this.onLayout?.(layout.height);
-    if (this.mode === 'camper') this.buildCamper(layout);
-    else this.buildProps(layout);
-  }
-  private frameBox(x: number, y: number, width: number, cell: number) {
-    const panel = this.add.rectangle(x + 8, y + 8, width - 16, cell - 16, colorNumber(palette.paper)).setOrigin(0);
-    const ground = this.add.graphics();
-    ground.fillStyle(colorNumber(palette.grassShade)).fillRect(x + 24, y + cell - 38, width - 48, 3);
-    ground.fillStyle(colorNumber(palette.soilForest)).fillRect(x + 24, y + cell - 35, width - 48, 4);
-    this.built.push(panel, ground);
-    return panel;
-  }
-  private buildCamper(layout: ReturnType<typeof galleryLayout>) {
-    const definition = this.definition();
-    const states = ['idle', 'run', 'jump'] as const;
-    for (let i = 0; i < 6; i++) {
-      const row = Math.floor(i / 3);
-      const pose = states[i % 3];
+    propDefs.forEach((prop, i) => {
       const x = (i % layout.columns) * layout.cellWidth;
       const y = Math.floor(i / layout.columns) * layout.cell;
       this.frameBox(x, y, layout.cellWidth, layout.cell);
       const label = this.add
-        .text(x + 20, y + 20, '', {fontFamily: 'Nunito', fontSize: '13px', fontStyle: 'bold', color: palette.ink})
-        .setResolution(2);
-      label.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-      this.labels.push(label);
-      this.built.push(label);
-      const texture = loadSprite(this, definition, outfitColors(row));
-      // Both densities display at the same 144-unit size: 24 px at x6 and 48 px at x3.
-      const sprite = this.add
-        .sprite(x + layout.cellWidth / 2, y + layout.cell - 42, texture, 'frame-0')
-        .setOrigin(0.5, 1)
-        .setScale(definition.width === 48 ? 3 : ART_PIXEL * 3);
-      this.built.push(sprite);
-      this.cells.push({clip: new ClockSprite(sprite, definition), sprite, texture, animation: '', pose, row});
-    }
-    this.refreshOutfits();
-  }
-  private buildProps(layout: ReturnType<typeof galleryLayout>) {
-    propDefs.forEach(([kind, def], i) => {
-      const x = (i % layout.columns) * layout.cellWidth;
-      const y = Math.floor(i / layout.columns) * layout.cell;
-      this.frameBox(x, y, layout.cellWidth, layout.cell);
-      const label = this.add
-        .text(x + 20, y + 20, propLabels[kind] + ' · ' + kind, {
+        .text(x + 20, y + 20, propLabels[prop.kind] + ' · ' + prop.kind, {
           fontFamily: 'Nunito',
           fontSize: '13px',
           fontStyle: 'bold',
-          color: palette.ink,
+          color: this.night ? palette.cream : palette.ink,
         })
         .setResolution(2);
       label.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-      this.labels.push(label);
       this.built.push(label);
-      const texture = loadSprite(this, def);
-      const sprite = this.add
-        .sprite(x + layout.cellWidth / 2, y + layout.cell - 42, texture, 'frame-0')
-        .setOrigin(0.5, 1)
-        .setScale(3);
-      this.built.push(sprite);
-      const animation = Object.keys(def.animations)[0] ?? '';
-      this.cells.push({
-        clip: new ClockSprite(sprite, def),
-        sprite,
-        texture,
-        animation,
-        pose: 'idle',
-        row: 0,
-      });
+      // Thân được tạo trước để lớp phát sáng nằm trên (thứ tự tạo quyết định thứ tự vẽ trong xưởng).
+      const layers: Layer[] = [this.addLayer(prop.body, 'body', x, y, layout.cellWidth, layout.cell)];
+      if (prop.glow) layers.push(this.addLayer(prop.glow, 'glow', x, y, layout.cellWidth, layout.cell));
+      this.cells.push({layers});
     });
+    this.applyLayer();
   }
-  refreshOutfits() {
-    if (this.mode !== 'camper') return;
-    const definition = this.definition();
-    this.cells.forEach((cell, i) => {
-      const index = (cell.row + this.outfit) % 2;
-      cell.texture = loadSprite(this, definition, outfitColors(index));
-      cell.clip = new ClockSprite(cell.sprite, definition);
-      cell.sprite.setScale(definition.width === 48 ? 3 : ART_PIXEL * 3);
-      this.labels[i].setText(reviewOutfits[index].name + '\n' + poseLabels[cell.pose]);
-    });
+
+  private addLayer(def: SpriteDefinition, kind: 'body' | 'glow', x: number, y: number, width: number, cell: number) {
+    const texture = loadSprite(this, def);
+    const sprite = this.add
+      .sprite(x + width / 2, y + cell - GROUND_PAD, texture, 'frame-0')
+      .setOrigin(0.5, 1)
+      .setScale(this.zoom);
+    this.built.push(sprite);
+    return {
+      kind,
+      clip: new ClockSprite(sprite, def.animations),
+      sprite,
+      texture,
+      animation: Object.keys(def.animations)[0] ?? '',
+    };
   }
+
+  /** Chỉ hiện thân, chỉ hiện lớp phát sáng, hoặc ghép cả hai. */
+  setLayer(layer: GalleryLayer) {
+    this.layer = layer;
+    this.applyLayer();
+  }
+
+  setZoom(zoom: number) {
+    this.zoom = zoom;
+    this.build();
+  }
+
+  setNight(night: boolean) {
+    this.night = night;
+    this.build();
+  }
+
+  private applyLayer() {
+    for (const cell of this.cells) {
+      for (const layer of cell.layers) {
+        layer.sprite.setVisible(this.layer === 'both' || this.layer === layer.kind);
+      }
+    }
+  }
+
+  private frameBox(x: number, y: number, width: number, cell: number) {
+    const fill = this.night ? palette.bgSkyNightMid : palette.paper;
+    const panel = this.add.rectangle(x + 8, y + 8, width - 16, cell - 16, colorNumber(fill)).setOrigin(0);
+    const ground = this.add.graphics();
+    ground.fillStyle(colorNumber(palette.grassShade)).fillRect(x + 24, y + cell - GROUND_PAD + 2, width - 48, 3);
+    ground.fillStyle(colorNumber(palette.soilForest)).fillRect(x + 24, y + cell - GROUND_PAD + 5, width - 48, 4);
+    this.built.push(panel, ground);
+  }
+
   flip() {
-    for (const cell of this.cells) cell.sprite.toggleFlipX();
+    for (const cell of this.cells) for (const layer of cell.layers) layer.sprite.toggleFlipX();
   }
+
   update(_time: number, delta: number) {
     if (!this.paused) this.clock += Math.min(delta / 1000, 0.1) * this.speed;
     for (const cell of this.cells) {
-      if (this.mode === 'camper') {
-        const pose = this.state === 'all' ? cell.pose : this.state;
-        cell.clip.draw(cell.texture, pose, this.clock);
-      } else if (cell.animation) {
-        cell.clip.draw(cell.texture, cell.animation, this.clock);
+      for (const layer of cell.layers) {
+        if (layer.animation) layer.clip.draw(layer.texture, layer.animation, this.clock);
       }
     }
   }

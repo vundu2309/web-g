@@ -1,89 +1,87 @@
 /* Player HUD: portrait, materials and real camp progress. */
 #hud {
   position: fixed;
-  left: max(1.25rem, env(safe-area-inset-left));
-  top: max(1.125rem, env(safe-area-inset-top));
+  left: max(var(--space-20), env(safe-area-inset-left));
+  top: max(var(--space-18), env(safe-area-inset-top));
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-8);
   align-items: center;
   pointer-events: none;
-  z-index: 3;
+  z-index: var(--z-hud);
 }
 .portrait-frame {
-  width: 3.375rem;
-  height: 3.75rem;
+  width: var(--size-54);
+  height: var(--size-60);
   border: var(--border);
-  background: #a1b080;
-  box-shadow:
-    3px 3px 0 #203c2c,
-    inset 0 0 0 3px #dcd5a3;
+  background: var(--surface-portrait);
+  box-shadow: var(--shadow-hud-1);
   overflow: hidden;
 }
 .portrait-frame img {
-  width: 2.4375rem;
-  height: 3.25rem;
+  width: var(--pixel-48);
+  height: var(--pixel-48);
   object-fit: contain;
   image-rendering: pixelated;
   display: block;
-  margin: 0.1875rem auto 0;
+  margin: var(--pixel-4) auto 0;
 }
 .hud-readout {
   border: var(--border);
-  background: #efe2bb;
-  box-shadow: 3px 3px 0 #203c2c;
-  min-width: 9.375rem;
-  padding: 0.3125rem 0.625rem;
+  background: var(--surface-readout);
+  box-shadow: var(--shadow-hud-2);
+  min-width: var(--size-150);
+  padding: var(--space-5) var(--space-10);
   color: var(--ink);
 }
 #score {
   display: flex;
   align-items: center;
-  gap: 0.4375rem;
-  font-size: 1.125rem;
-  line-height: 1.2;
+  gap: var(--space-7);
+  font-size: var(--text-18);
+  line-height: var(--leading-1-2);
   font-variant-numeric: tabular-nums;
 }
 #score .pixel-icon {
-  width: 1.4375rem;
-  height: 1.4375rem;
+  width: var(--space-23);
+  height: var(--space-23);
 }
 .hud-divider {
-  width: 0.125rem;
-  height: 1.25rem;
-  background: #a5aa7a;
-  margin: 0 0.25rem;
+  width: var(--space-2);
+  height: var(--space-20);
+  background: var(--border-hud-divider);
+  margin: 0 var(--space-4);
 }
 #effects {
   display: block;
-  font-size: 0.625rem;
-  font-weight: 800;
-  color: #66774f;
-  margin-top: 0.125rem;
-  letter-spacing: 0.2px;
+  font-size: var(--text-10);
+  font-weight: var(--weight-800);
+  color: var(--text-progress);
+  margin-top: var(--space-2);
+  letter-spacing: var(--pixel-0-2);
 }
 #chapter {
   position: fixed;
   left: 50%;
-  top: max(1.5rem, env(safe-area-inset-top));
+  top: max(var(--space-24), env(safe-area-inset-top));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  max-width: 17.5rem;
-  min-height: 2.375rem;
-  padding: 0.4375rem 0.875rem;
-  border: 2px solid #314a34;
-  background: #526c45;
-  color: #f1e5bc;
-  box-shadow: 3px 3px 0 #263d31;
-  z-index: 3;
-  font-size: 0.75rem;
-  font-weight: 800;
+  gap: var(--space-8);
+  max-width: var(--size-280);
+  min-height: var(--size-38);
+  padding: var(--space-7) var(--space-14);
+  border: var(--pixel-2) solid var(--border-region);
+  background: var(--surface-region);
+  color: var(--text-region);
+  box-shadow: var(--shadow-hud-3);
+  z-index: var(--z-hud);
+  font-size: var(--text-12);
+  font-weight: var(--weight-800);
   pointer-events: none;
 }
 #chapter .pixel-icon {
-  width: 1rem;
-  height: 1rem;
+  width: var(--space-16);
+  height: var(--space-16);
 }
 #chapter span {
   white-space: nowrap;
@@ -92,19 +90,19 @@
 }
 #game-actions {
   position: fixed;
-  right: max(1.25rem, env(safe-area-inset-right));
-  top: max(1.25rem, env(safe-area-inset-top));
+  right: max(var(--space-20), env(safe-area-inset-right));
+  top: max(var(--space-20), env(safe-area-inset-top));
   display: flex;
-  gap: 0.5625rem;
-  z-index: 4;
+  gap: var(--space-9);
+  z-index: var(--z-toast);
 }
 #game-actions button {
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0.625rem;
+  width: var(--size-44);
+  height: var(--size-44);
+  padding: var(--space-10);
   color: var(--cream);
 }
 #game-actions .pixel-icon {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: var(--space-18);
+  height: var(--space-18);
 }

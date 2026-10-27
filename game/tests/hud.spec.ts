@@ -15,9 +15,12 @@ for (const viewport of [
     await page.locator('#start').click();
     expect(await page.evaluate(() => document.fonts.check('800 14px Nunito', 'Gỗ Đá câu cá ế ệ'))).toBe(true);
     expect(await page.locator('#inventory').evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Nunito');
-    for (const id of ['hud', 'chapter', 'pause', 'settings', 'camp-tools', 'left', 'right', 'jump'])
+    for (const id of ['pause', 'camp-tools', 'left', 'right', 'jump'])
       await expect(page.locator('#' + id)).toBeInViewport();
-    const a = (await page.locator('#hud').boundingBox())!,
+    expect((await page.locator('#inventory').boundingBox())?.width).toBe(44);
+    expect((await page.locator('#left').boundingBox())?.width).toBe(56);
+    expect((await page.locator('#jump').boundingBox())?.height).toBe(56);
+    const a = (await page.locator('#camp-tools').boundingBox())!,
       b = (await page.locator('#chapter').boundingBox())!,
       c = (await page.locator('#game-actions').boundingBox())!;
     for (const [x, y] of [
@@ -30,6 +33,8 @@ for (const viewport of [
     await expect(page.locator('#hud-stone')).toHaveText('16');
     const portrait = await page.locator('#hud-avatar').getAttribute('src');
     await page.locator('#inventory').click();
+    await expect(page.locator('#materials-panel')).toBeVisible();
+    await page.locator('[data-inventory-tab="equipment"]').click();
     await page.locator('[data-gear="hat-knit"]').click();
     expect(await page.locator('#hud-avatar').getAttribute('src')).not.toBe(portrait);
     expect(

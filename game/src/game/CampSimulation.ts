@@ -18,7 +18,8 @@ export class CampSimulation {
     const direction = scene.controls.direction;
     if (direction && scene.fishingSystem.cancel()) scene.ui.toast('Đã thu cần để di chuyển.');
     const body = scene.player.body as Phaser.Physics.Arcade.Body;
-    if (direction && body.blocked.down && body.velocity.y >= 0) {
+    scene.aquatic.step(dt);
+    if (!scene.aquatic.swimming.active && direction && body.blocked.down && body.velocity.y >= 0) {
       const next = groundAt(scene.player.x + direction * 18),
         rise = scene.player.y - next;
       if (rise > 0 && rise <= 32) {
@@ -26,11 +27,18 @@ export class CampSimulation {
         body.updateFromGameObject();
       }
     }
-    scene.player.setVelocityX(scene.fishing ? 0 : direction * 220 * (scene.state.speedBuff > 0 ? 1.1 : 1));
+    if (!scene.aquatic.swimming.active)
+      scene.player.setVelocityX(scene.fishing ? 0 : direction * 220 * (scene.state.speedBuff > 0 ? 1.1 : 1));
     if (direction) scene.player.setFlipX(direction < 0);
-    const event = scene.fishingSystem.update(dt, scene.controls.pulling, scene.state.easyFishing);
+    const event = scene.fishingSystem.update(
+      dt,
+      scene.controls.pulling,
+      scene.state.easyFishing,
+      scene.aquatic.readyToBite,
+    );
     if (event === 'bite') scene.ui.toast('Cá cắn câu! Nhấn E / GIẬT CẦN!');
     else if (event === 'caught') {
+      scene.aquatic.caught();
       const caught = scene.fishingSystem.reel(scene.state)!;
       scene.persist();
       scene.ui.toast('Câu được ' + caught.species.name + ' · ' + caught.length + ' cm. Đã cho vào kho đồ.');

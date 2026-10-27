@@ -1,3 +1,4 @@
+import {WORLD_WIDTH} from '../data/worldLayout.ts';
 import {decodeChests} from './storageCodec.ts';
 import {rods} from '../data/rods.ts';
 import {slots, gear, fishSpecies, recipes, meals, type Slot} from '../data/catalog.ts';
@@ -43,7 +44,7 @@ export function migrateV1(raw: Record<string, unknown>): Save {
 }
 function sanitize(raw: Record<string, unknown>, legacy = false): Save {
   const clean = newSave();
-  clean.x = Math.max(30, number(raw.x, 15960, 120));
+  clean.x = Math.max(30, number(raw.x, WORLD_WIDTH - 40, 120));
   clean.wood = number(raw.wood, 9999);
   clean.stone = number(raw.stone, 9999);
   clean.time =
@@ -105,7 +106,8 @@ function sanitize(raw: Record<string, unknown>, legacy = false): Save {
     for (const [index, value] of raw.buildings.slice(0, 80).entries()) {
       const item = record(value);
       const kind = Object.keys(recipes).find((key) => key === item.kind) as keyof typeof recipes | undefined;
-      if (!kind || typeof item.x !== 'number' || !Number.isFinite(item.x) || item.x < 60 || item.x > 15940) continue;
+      if (!kind || typeof item.x !== 'number' || !Number.isFinite(item.x) || item.x < 60 || item.x > WORLD_WIDTH - 60)
+        continue;
       let id = typeof item.id === 'string' && /^build-[\w-]{1,60}$/.test(item.id) ? item.id : 'build-old-' + index;
       let suffix = 0;
       while (ids.has(id)) id = 'build-migrated-' + index + '-' + suffix++;

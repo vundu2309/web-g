@@ -1,3 +1,4 @@
+import {WORLD_WIDTH} from './data/worldLayout.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {newSave, decodeSave, equip, craft, rollFish, storeFish, fishSpecies} from './camping.ts';
@@ -21,7 +22,7 @@ test('craft never charges insufficient materials', () => {
 });
 test('fish follow habitats and preserve counts and records', () => {
   const s = newSave();
-  for (const habitat of ['pond', 'lake', 'river'] as const)
+  for (const habitat of ['pond', 'lake', 'river', 'sea'] as const)
     for (let i = 0; i < 100; i++) {
       const f = rollFish(habitat, i / 100, i / 100);
       assert.ok((f.species.habitats as readonly string[]).includes(habitat));
@@ -30,7 +31,7 @@ test('fish follow habitats and preserve counts and records', () => {
   storeFish(s, 'carp', 35);
   storeFish(s, 'carp', 28);
   assert.deepEqual(s.fish.carp, {count: 2, largest: 35});
-  assert.equal(fishSpecies.length, 12);
+  assert.equal(fishSpecies.length, 15);
 });
 test('save restores equipment, fish and buildings and rejects invalid values', () => {
   const s = newSave();
@@ -56,7 +57,7 @@ test('save restores equipment, fish and buildings and rejects invalid values', (
   );
   assert.equal(cleaned.wood, 0);
   assert.equal(cleaned.stone, 0);
-  assert.equal(cleaned.x, 15960);
+  assert.equal(cleaned.x, WORLD_WIDTH - 40);
   assert.equal(cleaned.equipped.hat, 'hat-ranger');
   assert.equal(cleaned.fish.carp?.largest, 65);
   assert.equal(cleaned.buildings.length, 0);

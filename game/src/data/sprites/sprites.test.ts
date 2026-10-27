@@ -2,14 +2,18 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {compileSprite, type SpriteDefinition} from '../../domain/sprite.ts';
 import {palette, ART_PIXEL} from '../palette.ts';
-import {buildingSprites} from './buildings.ts';
+import {buildingGlows, buildingSprites} from './buildings.ts';
 import {woodSprite, stoneSprite} from './resources.ts';
-import {camperSprite} from './camper.ts';
 import {patchRows} from './grid.ts';
-const everything: SpriteDefinition[] = [camperSprite, woodSprite, stoneSprite, ...Object.values(buildingSprites)];
+const everything: SpriteDefinition[] = [
+  woodSprite,
+  stoneSprite,
+  ...Object.values(buildingSprites),
+  ...Object.values(buildingGlows),
+];
 test('every structure and resource compiles with palette colors, valid frames and animation indices', () => {
   for (const def of everything) {
-    const compiled = compileSprite(def, palette);
+    const compiled = compileSprite(def, palette, {});
     assert.ok(compiled.frames.length > 0, def.name);
     for (const [name, animation] of Object.entries(def.animations)) {
       assert.ok(animation.frames.length > 0, def.name + ' ' + name);
@@ -30,10 +34,11 @@ test('resources are 16×12 cells shown at the same 32×24 footprint as before', 
     assert.equal(def.height * ART_PIXEL, 24, def.name);
   }
 });
-test('animated structures keep their named cycles', () => {
+test('animated structures keep their named cycles; self-lit flames live in the glow layer', () => {
   assert.deepEqual(Object.keys(buildingSprites.chest.animations).sort(), ['close', 'open']);
-  assert.ok(buildingSprites.fire.animations.burn.frames.length >= 3);
+  assert.ok(buildingGlows.fire!.animations.burn.frames.length >= 3);
   assert.ok(buildingSprites.tent.animations.flutter.frames.length >= 2);
+  assert.equal(buildingSprites.fire.animations.burn, undefined);
 });
 test('recorded cell patches change only the named cells and never mutate the source grid', () => {
   const source = ['ab', 'cd'];

@@ -85,6 +85,7 @@ test('night lighting reuses textures through resize, low quality and FPS samplin
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await start(page);
+  await page.waitForFunction(() => window.forest.visuals.outfitsReady);
   await page.evaluate(() => {
     const scene = window.forest;
     scene.state.time = 440;
@@ -96,10 +97,12 @@ test('night lighting reuses textures through resize, low quality and FPS samplin
   await page.waitForFunction(() => window.forest.fps.samples >= 3);
   const high = await page.evaluate(() => ({
     fps: window.forest.fps.average,
-    textures: window.forest.textures.getTextureKeys().length,
+    textures: window.forest.textures.getTextureKeys().filter((key) => !/^(terrain-|water-|decor-|tree-)/.test(key))
+      .length,
   }));
   await page.screenshot({path: 'test-results/night-high.png'});
-  await page.locator('#settings').click();
+  await page.locator('#pause').click();
+  await page.locator('#pause-settings').click();
   await page.locator('#quality-low').click();
   await page.locator('#done-settings').click();
   await page.locator('#resume').click();
@@ -109,7 +112,8 @@ test('night lighting reuses textures through resize, low quality and FPS samplin
   await page.waitForFunction((samples) => window.forest.fps.samples >= samples + 3, samples);
   const low = await page.evaluate(() => ({
     fps: window.forest.fps.average,
-    textures: window.forest.textures.getTextureKeys().length,
+    textures: window.forest.textures.getTextureKeys().filter((key) => !/^(terrain-|water-|decor-|tree-)/.test(key))
+      .length,
   }));
   expect(low.textures).toBe(high.textures);
   expect(high.fps).toBeGreaterThan(0);

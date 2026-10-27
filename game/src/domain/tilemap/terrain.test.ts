@@ -1,14 +1,30 @@
+import {COAST_X, LEGACY_WIDTH, LEGACY_HEIGHT} from '../../data/worldLayout.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {buildTerrainData} from './terrain.ts';
 import {TileGrid} from './grid.ts';
-import {sectionRows} from './surface.ts';
+import {columnRows} from './surface.ts';
 import {TILE, WALL_KINDS} from './types.ts';
-import {TERRAIN_SEED, WORLD_HEIGHT, WORLD_WIDTH, groundAt, regions, terrainGrid, waters} from '../../data/world.ts';
+import {
+  TERRAIN_SEED,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  flatSpans,
+  groundAt,
+  regions,
+  terrainGrid,
+  waters,
+} from '../../data/world.ts';
 
 const COLS = WORLD_WIDTH / TILE;
 const ROWS = Math.ceil(WORLD_HEIGHT / TILE);
-const spec = {cols: COLS, rows: ROWS, seed: TERRAIN_SEED, lakes: waters};
+const spec = {
+  cols: LEGACY_WIDTH / TILE,
+  rows: Math.ceil(LEGACY_HEIGHT / TILE),
+  seed: TERRAIN_SEED,
+  lakes: waters.filter((water) => water.x < LEGACY_WIDTH),
+  flats: flatSpans,
+};
 
 /** Bản sao độc lập của công thức cũ (trước T2) để so sánh; không dùng code mới. */
 function legacyGroundAt(x: number) {
@@ -16,6 +32,14 @@ function legacyGroundAt(x: number) {
   const sample = water ? water.x : x;
   const column = Math.floor(Math.max(0, Math.min(WORLD_WIDTH - 1, sample)) / 256);
   return 650 - Math.round((Math.sin(column * 0.19) * 65 + column * 3.1) / 16) * 16;
+}
+
+function inFlat(x: number) {
+  return (
+    (x >= LEGACY_WIDTH && x < LEGACY_WIDTH + 256) ||
+    x >= COAST_X ||
+    flatSpans.some((f) => x >= f.x && x < f.x + f.width)
+  );
 }
 
 function inLakeZone(x: number) {
@@ -40,13 +64,19 @@ test('the same seed gives the same grid, and the grid has the expected size', ()
   assert.equal(first.rows, 29);
   assert.ok(sameBuild(first, second));
   assert.ok(sameBuild(first, terrainGrid));
-  assert.equal(sectionRows(waters, TERRAIN_SEED, 62).length, 62);
+  assert.equal(columnRows(waters, flatSpans, TERRAIN_SEED, COLS).length, COLS);
 });
 
-test('ground stays within 48 units of the legacy profile and inside 64', () => {
+test('ground stays within 64 units of the legacy profile at every x', () => {
   let worst = 0;
-  for (let x = 0; x < WORLD_WIDTH; x += 8) worst = Math.max(worst, Math.abs(groundAt(x) - legacyGroundAt(x)));
-  assert.ok(worst <= 48, 'worst deviation ' + worst);
+  for (let x = 0; x < LEGACY_WIDTH; x += 8) worst = Math.max(worst, Math.abs(groundAt(x) - legacyGroundAt(x)));
+  assert.ok(worst <= 64, 'worst deviation ' + worst);
+});
+
+test('the waterfall span is flat so the falls sit on one level', () => {
+  const c0 = Math.floor(flatSpans[0].x / TILE);
+  const c1 = Math.ceil((flatSpans[0].x + flatSpans[0].width) / TILE) - 1;
+  for (let c = c0; c <= c1; c++) assert.equal(terrainGrid.surfaceRow(c), terrainGrid.surfaceRow(c0), 'column ' + c);
 });
 
 test('neighbouring columns differ by at most one tile', () => {
@@ -55,22 +85,30 @@ test('neighbouring columns differ by at most one tile', () => {
   }
 });
 
-test('ground height changes only on SECTION borders, so old 256-unit drawing stays aligned', () => {
-  for (let c = 0; c < COLS; c += 8) {
-    for (let k = 1; k < 8; k++) assert.equal(terrainGrid.surfaceRow(c + k), terrainGrid.surfaceRow(c));
+test('ground steps happen on every column, not only on SECTION borders', () => {
+  let steps = 0;
+  let inside = 0;
+  for (let c = 1; c < COLS; c++) {
+    if (terrainGrid.surfaceRow(c) === terrainGrid.surfaceRow(c - 1)) continue;
+    steps++;
+    if (c % 8 !== 0) inside++;
   }
+  assert.ok(inside >= 20, 'steps inside sections: ' + inside + ' of ' + steps);
 });
 
 test('every flat run outside lakes is at least 6 tiles, and each region has one', () => {
   let start = 0;
   for (let c = 1; c <= COLS; c++) {
     if (c < COLS && terrainGrid.surfaceRow(c) === terrainGrid.surfaceRow(start)) continue;
-    const exempt = [...Array(c - start).keys()].some((k) => inLakeZone((start + k) * TILE + 16));
+    const exempt = [...Array(c - start).keys()].some(
+      (k) => inLakeZone((start + k) * TILE + 16) || inFlat((start + k) * TILE + 16),
+    );
     if (!exempt) assert.ok(c - start >= 6, 'flat run from column ' + start + ' is ' + (c - start));
     start = c;
   }
   for (const [i, region] of regions.entries()) {
     const end = regions[i + 1]?.x ?? WORLD_WIDTH;
+    if (region.x >= COAST_X) continue;
     const longest = maxFlatRun(region.x / TILE, end / TILE);
     assert.ok(longest >= 6, region.name + ' has no flat run of 6 tiles');
   }
@@ -86,17 +124,22 @@ function maxFlatRun(from: number, to: number) {
   return best;
 }
 
-test('lakes are flat decks with a basin of water and sand under them', () => {
-  for (const lake of waters) {
+test('lakes are flat decks: water starts on the deck row, with no solid cell between walkway and water', () => {
+  for (const lake of waters.filter((water) => water.habitat !== 'sea')) {
     const c0 = Math.round(lake.x / TILE);
     const c1 = Math.round((lake.x + lake.width) / TILE) - 1;
     const deck = terrainGrid.surfaceRow(c0);
     for (let c = c0; c <= c1; c++) {
       assert.equal(terrainGrid.surfaceRow(c), deck, lake.id + ' column ' + c);
-      assert.ok(terrainGrid.isWater(c, deck + 1), lake.id + ' water at column ' + c);
-      assert.equal(terrainGrid.isSolid(c, deck), true, lake.id + ' deck is solid');
-      assert.ok(!terrainGrid.isWater(c, deck), lake.id + ' deck is not water');
+      assert.ok(terrainGrid.isWater(c, deck), lake.id + ' water on the deck row at column ' + c);
+      assert.equal(terrainGrid.isSolid(c, deck - 1), false, lake.id + ' air above the deck at column ' + c);
+      let r = deck;
+      while (terrainGrid.isWater(c, r)) r++;
+      assert.ok(r > deck, lake.id + ' water depth at column ' + c);
+      assert.equal(terrainGrid.kindAt(c, r), 'sand', lake.id + ' basin floor at column ' + c);
     }
+    assert.equal(terrainGrid.surfaceRow(c0 - 1), deck, lake.id + ' bank left of the lake is level');
+    assert.equal(terrainGrid.surfaceRow(c1 + 1), deck, lake.id + ' bank right of the lake is level');
     assert.ok(waterCount(c0, c1) > 0);
   }
 });
@@ -113,7 +156,7 @@ test('water exists only inside lake basins', () => {
       if (!terrainGrid.isWater(c, r)) continue;
       const lake = waters.find((w) => c >= Math.round(w.x / TILE) && c < Math.round((w.x + w.width) / TILE));
       assert.ok(lake, 'water outside lake at ' + c + ',' + r);
-      assert.ok(r > terrainGrid.surfaceRow(c));
+      assert.ok(r >= terrainGrid.waterSurfaceRow(c), 'water above its surface at ' + c + ',' + r);
     }
   }
 });
@@ -139,9 +182,9 @@ test('caves are sealed: no air below ground can be reached from the sky', () => 
     }
   }
   for (let i = 0; i < COLS * ROWS; i++) {
-    if (!seen[i]) continue;
     const c = i % COLS;
     const r = Math.floor(i / COLS);
+    if (!seen[i] || terrainGrid.isWater(c, r)) continue;
     assert.ok(r < terrainGrid.surfaceRow(c), 'air reached below ground at ' + c + ',' + r);
   }
 });

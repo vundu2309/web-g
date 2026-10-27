@@ -1,3 +1,4 @@
+import {WORLD_WIDTH} from '../data/worldLayout.ts';
 import type {Period} from './dayTime.ts';
 import {gear, fishSpecies, recipes, type FishId, type Habitat, type BuildingKind} from '../data/catalog.ts';
 import type {Save} from './saveTypes.ts';
@@ -45,7 +46,7 @@ export function storeFish(save: Save, id: FishId, length: number) {
 export function craft(save: Save, kind: BuildingKind, x: number) {
   const recipe = recipes[kind];
   if (save.wood < recipe.wood || save.stone < recipe.stone || save.buildings.length >= 80) return false;
-  if (!Number.isFinite(x) || x < 60 || x > 15940) return false;
+  if (!Number.isFinite(x) || x < 60 || x > WORLD_WIDTH - 60) return false;
   if (kind === 'stove' && !save.buildings.some((b) => b.kind === 'fire' && Math.abs(b.x - x) < 300)) return false;
   save.wood -= recipe.wood;
   save.stone -= recipe.stone;

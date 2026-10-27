@@ -12,16 +12,20 @@ export type TileKind = (typeof TILE_KINDS)[number];
 export const WALL_KINDS = ['none', 'wallDirt', 'wallStone'] as const;
 export type WallKind = (typeof WALL_KINDS)[number];
 
-export interface Lake {
+/** Khoảng theo đơn vị thế giới: vùng hồ hoặc khoảng phẳng bắt buộc (ví dụ quanh thác). */
+export interface Span {
   x: number;
   width: number;
 }
+
+export type Lake = Span;
 
 export interface TerrainSpec {
   cols: number;
   rows: number;
   seed: number;
-  lakes: readonly Lake[];
+  lakes: readonly Span[];
+  flats: readonly Span[];
 }
 
 /** Dữ liệu ô thô, lưu bằng mảng kiểu số; chỉ `TileGrid` được truy cập trực tiếp. */

@@ -1,84 +1,81 @@
+/* legacy: dọn sau — giữ thứ tự selector giữa các component. */
 .camp-dialog {
-  width: min(41.875rem, calc(100vw - 2rem));
+  width: min(var(--size-670), calc(100vw - var(--space-32)));
 }
 .camp-dialog .dialog-content {
   text-align: left;
 }
 .camp-dialog p {
-  font-size: 0.8125rem;
+  font-size: var(--text-13);
 }
 .wardrobe {
   display: flex;
-  gap: 1.25rem;
+  gap: var(--space-20);
   align-items: center;
-  background: #b0bf91;
-  border: 2px solid #76875f;
-  box-shadow: inset 3px 3px 0 #879c75;
-  padding: 0.75rem 1.125rem;
+  background: var(--surface-wardrobe);
+  border: var(--pixel-2) solid var(--border-wardrobe);
+  box-shadow: var(--shadow-inventory-1);
+  padding: var(--space-12) var(--space-18);
 }
 .wardrobe img {
-  width: 4.5rem;
-  height: 6rem;
+  width: var(--size-72);
+  height: var(--size-96);
   object-fit: contain;
   image-rendering: pixelated;
 }
 .wardrobe h3 {
-  margin-bottom: 0.3125rem;
+  margin-bottom: var(--space-5);
 }
 .wardrobe p {
   margin-bottom: 0;
 }
 .gear-slot h3 {
-  margin: 1.125rem 0 0.5rem;
-  font-size: 0.8125rem;
+  margin: var(--space-18) 0 var(--space-8);
+  font-size: var(--text-13);
   text-transform: uppercase;
-  letter-spacing: 0.0625rem;
+  letter-spacing: var(--space-1);
 }
 .gear-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5625rem;
+  gap: var(--space-9);
 }
 .gear-options button {
   display: grid;
-  grid-template-columns: 1.875rem 1fr;
+  grid-template-columns: var(--space-30) 1fr;
   align-items: center;
-  gap: 0.1875rem 0.5rem;
+  gap: var(--space-3) var(--space-8);
   text-align: left;
-  min-height: 4.1875rem;
-  background: #ede1bc;
+  min-height: var(--size-67);
+  background: var(--surface-gear);
   color: var(--ink);
-  font-size: 0.875rem;
-  font-weight: 800;
-  padding: 0.625rem;
-  box-shadow:
-    inset 0 3px #fff1cb,
-    inset 0 -3px #c5b17f;
+  font-size: var(--text-14);
+  font-weight: var(--weight-800);
+  padding: var(--space-10);
+  box-shadow: var(--shadow-inventory-2);
 }
 .gear-options button[aria-pressed='true'] {
-  background: #637e4f;
-  color: #fff2ca;
-  border-color: #355538;
-  box-shadow:
-    inset 0 3px #8d9f6a,
-    inset 0 -3px #46613e;
+  background: var(--gear-selected);
+  color: var(--text-gear-selected);
+  border-color: var(--border-gear-selected);
+  box-shadow: var(--shadow-inventory-3);
 }
 .gear-options i {
   display: block;
-  width: 1.5625rem;
-  height: 1.6875rem;
+  width: var(--space-25);
+  height: var(--space-27);
   grid-row: span 2;
   background: var(--swatch);
-  border: 2px solid #354a35;
-  box-shadow: inset 2px 2px 0 #ffffff33;
+  border: var(--pixel-2) solid var(--border-gear-icon);
+  box-shadow: var(--shadow-inventory-4);
 }
 .gear-options small {
-  font-size: 0.6875rem;
+  font-size: var(--text-11);
   letter-spacing: 0;
-  color: #65774f;
+  color: var(--text-gear-hint);
 }
 .gear-options [aria-pressed='true'] small {
-  color: #e7e3ba;
+  color: var(--text-gear-selected-hint);
 }
 .gear-hat {
   clip-path: polygon(15% 0, 85% 0, 85% 60%, 100% 60%, 100% 85%, 0 85%, 0 60%, 15% 60%);
@@ -96,55 +93,55 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.625rem;
-  border-top: 2px solid #9fab7e;
-  padding-top: 1rem;
-  margin-top: 1.5rem;
+  gap: var(--space-10);
+  border-top: var(--pixel-2) solid var(--border-fish-heading);
+  padding-top: var(--space-16);
+  margin-top: var(--space-24);
 }
 .fish-heading h3 {
   margin: 0;
 }
 .fish-heading span {
-  font-size: 0.75rem;
-  color: #5c704c;
+  font-size: var(--text-12);
+  color: var(--text-fish-count);
 }
 #fish-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5625rem;
-  margin: 0.75rem 0;
+  gap: var(--space-9);
+  margin: var(--space-12) 0;
 }
 .fish-entry {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.75rem 0.625rem;
-  border: 2px solid #abb48a;
-  background: #d7cfab;
-  color: #6d7d61;
-  min-height: 4.0625rem;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-10);
+  border: var(--pixel-2) solid var(--border-fish);
+  background: var(--surface-undiscovered);
+  color: var(--text-undiscovered);
+  min-height: var(--size-65);
 }
 .fish-entry.caught {
-  background: #eee3bd;
-  border-color: #8e9f70;
+  background: var(--surface-fish-caught);
+  border-color: var(--border-fish-caught);
   color: var(--ink);
 }
 .fish-entry strong {
   display: block;
-  font-size: 0.8125rem;
+  font-size: var(--text-13);
 }
 .fish-entry small {
   display: block;
-  font-size: 0.6875rem;
+  font-size: var(--text-11);
   letter-spacing: 0;
-  line-height: 1.4;
-  color: #61734f;
-  margin-top: 0.25rem;
+  line-height: var(--leading-1-4);
+  color: var(--text-fish-hint);
+  margin-top: var(--space-4);
 }
 .fish-entry b {
   margin-left: auto;
-  color: #536c3f;
-  font-size: 0.9375rem;
+  color: var(--text-fish-quantity);
+  font-size: var(--text-15);
   font-variant-numeric: tabular-nums;
 }
 .fish-icon {
@@ -152,49 +149,46 @@
   flex-shrink: 0;
 }
 .fish-icon .pixel-icon {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--space-28);
+  height: var(--space-28);
 }
 .recipe {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--space-14);
   text-align: left;
   width: 100%;
-  margin: 0.75rem 0;
-  background: #ede0b7;
+  margin: var(--space-12) 0;
+  background: var(--surface-recipe);
   color: var(--ink);
-  padding: 0.75rem;
-  box-shadow:
-    inset 0 3px #fff0c8,
-    inset 0 -4px #c1ad7a,
-    3px 3px 0 #263d31;
+  padding: var(--space-12);
+  box-shadow: var(--shadow-inventory-5);
 }
 .recipe:hover {
-  background: #f5e9c7;
+  background: var(--surface-recipe-hover);
 }
 .recipe img {
-  width: 5.5rem;
-  height: 4.0625rem;
+  width: var(--size-88);
+  height: var(--size-65);
   object-fit: contain;
   image-rendering: pixelated;
-  background: #b2c193;
-  border: 2px solid #84956d;
+  background: var(--surface-recipe-image);
+  border: var(--pixel-2) solid var(--border-recipe-image);
 }
 .recipe strong {
-  font-size: 1.0625rem;
+  font-size: var(--text-17);
 }
 .recipe p {
-  margin: 0.25rem 0;
-  font-size: 0.75rem;
+  margin: var(--space-4) 0;
+  font-size: var(--text-12);
 }
 .recipe small {
   letter-spacing: 0;
-  color: #637549;
+  color: var(--text-recipe-cost);
 }
 .recipe > span {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 0.75rem;
-  color: #5c7348;
+  font-size: var(--text-12);
+  color: var(--text-recipe-action);
 }

@@ -1,0 +1,214 @@
+/* Token đề xuất chỉ nằm trong mockup; chưa thay hệ thống token của game. */
+:root {
+  --mock-slot: 40px;
+  --mock-touch: 56px;
+  --mock-icon: 22px;
+  --mock-inset: 12px;
+  --mock-gap: 4px;
+  --mock-line: 2px solid var(--ink);
+  --mock-shadow: 2px 2px 0 var(--ink);
+  --mock-panel: 352px;
+  --mock-figure-w: 72px;
+  --mock-figure-h: 96px;
+  --mock-prop-w: 110px;
+  --mock-prop-h: 74px;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  color: var(--cream);
+  background: var(--surface-page);
+  font: var(--weight-800) var(--text-14)/var(--leading-body) var(--font);
+}
+[hidden] {
+  display: none !important;
+}
+.scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.scene img {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+  image-rendering: pixelated;
+}
+.icon-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.icon {
+  width: var(--mock-icon);
+  height: var(--mock-icon);
+  fill: currentColor;
+  shape-rendering: crispEdges;
+  flex-shrink: 0;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: var(--radius-square);
+}
+button:focus-visible {
+  outline: var(--pixel-3) solid var(--gold);
+  outline-offset: var(--pixel-3);
+}
+button:active,
+button.held {
+  transform: translate(var(--pixel-2), var(--pixel-2));
+  box-shadow: none;
+}
+.hud-top {
+  position: fixed;
+  top: max(var(--mock-inset), env(safe-area-inset-top));
+  left: max(var(--mock-inset), env(safe-area-inset-left));
+  right: max(var(--mock-inset), env(safe-area-inset-right));
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.hotbar,
+.corner {
+  display: flex;
+  gap: var(--mock-gap);
+  align-items: center;
+}
+.slot,
+.touch-key {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--mock-slot);
+  height: var(--mock-slot);
+  padding: 0;
+  background: var(--button-touch);
+  border: var(--mock-line);
+  box-shadow: var(--mock-shadow);
+  pointer-events: auto;
+}
+.slot:hover,
+.touch-key:hover {
+  background: var(--button-hover);
+}
+.slot[aria-expanded='true'] {
+  border-color: var(--gold);
+}
+kbd {
+  font: var(--weight-800) var(--text-10)/1 var(--font);
+}
+.slot kbd {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-3);
+  color: var(--cream);
+}
+.clock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  margin-right: var(--space-4);
+  font-size: var(--text-12);
+  color: var(--cream);
+  background: var(--button-touch);
+  font-variant-numeric: tabular-nums;
+}
+.clock .icon {
+  width: var(--space-14);
+  height: var(--space-14);
+  color: var(--gold);
+}
+.context {
+  position: absolute;
+  top: 62%;
+  left: 49%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-8);
+  color: var(--cream);
+  background: var(--button-touch);
+  font-size: var(--text-12);
+  pointer-events: none;
+}
+.context kbd {
+  border: var(--space-1) solid var(--cream);
+  padding: var(--space-2) var(--space-4);
+}
+.region {
+  position: fixed;
+  top: var(--size-70);
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--cream);
+  background: var(--button-touch);
+  padding: var(--space-6) var(--space-12);
+}
+.touch {
+  display: none;
+}
+@media (max-width: 600px) {
+  :root {
+    --mock-slot: 44px;
+  }
+  .slot kbd,
+  .context {
+    display: none;
+  }
+  .touch {
+    position: fixed;
+    inset: auto max(var(--mock-inset), env(safe-area-inset-right)) max(var(--mock-inset), env(safe-area-inset-bottom))
+      max(var(--mock-inset), env(safe-area-inset-left));
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+  .move {
+    display: flex;
+    gap: var(--space-6);
+  }
+  .actions {
+    display: grid;
+    gap: var(--space-10);
+  }
+  .touch-key {
+    width: var(--mock-touch);
+    height: var(--mock-touch);
+    touch-action: none;
+    user-select: none;
+  }
+  .interact {
+    gap: 0;
+    align-content: center;
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .interact span {
+    font-size: var(--text-10);
+  }
+  .panel {
+    width: calc(100vw - var(--space-24));
+    max-height: calc(100dvh - var(--size-150));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

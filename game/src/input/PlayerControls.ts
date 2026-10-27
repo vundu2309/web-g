@@ -9,6 +9,7 @@ export interface InputContext {
 }
 export class PlayerControls {
   readonly keys = new Set<string>();
+  readonly verticalPointers = new Map<number, number>();
   readonly actionPointers = new Set<number>();
   readonly pointers = new Map<number, number>();
   private readonly abort = new AbortController();
@@ -80,23 +81,42 @@ export class PlayerControls {
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
       action.addEventListener(type, (event) => this.actionPointers.delete(event.pointerId), options);
     }
-    const jump = document.getElementById('jump')!;
-    jump.addEventListener(
-      'pointerdown',
-      (e) => {
-        e.preventDefault();
-        context.action('jump');
-      },
-      options,
-    );
-    jump.addEventListener(
-      'click',
-      (e) => {
-        if (e.detail === 0) context.action('jump');
-      },
-      options,
-    );
+    for (const [id, direction] of [
+      ['jump', -1],
+      ['dive', 1],
+    ] as const) {
+      const button = document.getElementById(id)!;
+      button.addEventListener(
+        'pointerdown',
+        (event) => {
+          event.preventDefault();
+          if (!context.playing() || context.modalOpen()) return;
+          button.setPointerCapture(event.pointerId);
+          this.verticalPointers.set(event.pointerId, direction);
+          if (id === 'jump') context.action('jump');
+          this.syncButtons();
+        },
+        options,
+      );
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
+        button.addEventListener(
+          type,
+          (event) => {
+            this.verticalPointers.delete(event.pointerId);
+            this.syncButtons();
+          },
+          options,
+        );
+      button.addEventListener(
+        'click',
+        (event) => {
+          if (event.detail === 0 && id === 'jump') context.action('jump');
+        },
+        options,
+      );
+    }
   }
+
   private keydown = (event: KeyboardEvent) => {
     const c = this.context;
     if (c.modalOpen()) {
@@ -111,6 +131,11 @@ export class PlayerControls {
       if (c.playing()) this.keys.add(event.code);
       this.syncButtons();
       return;
+    }
+    if (['Space', 'ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(event.code)) {
+      event.preventDefault();
+      if (c.playing()) this.keys.add(event.code);
+      this.syncButtons();
     }
     if (event.code === 'KeyE' && c.playing()) this.keys.add(event.code);
     if (event.repeat) return;
@@ -133,6 +158,13 @@ export class PlayerControls {
   get pulling() {
     return this.keys.has('KeyE') || this.actionPointers.size > 0;
   }
+  get vertical() {
+    let value =
+      Number(this.keys.has('ArrowDown') || this.keys.has('KeyS')) -
+      Number(this.keys.has('ArrowUp') || this.keys.has('KeyW') || this.keys.has('Space'));
+    for (const direction of this.verticalPointers.values()) value += direction;
+    return Math.sign(value);
+  }
   get direction() {
     let direction =
       Number(this.keys.has('ArrowRight') || this.keys.has('KeyD')) -
@@ -141,12 +173,15 @@ export class PlayerControls {
     return Math.sign(direction);
   }
   clear() {
+    this.verticalPointers.clear();
     this.actionPointers.clear();
     this.keys.clear();
     this.pointers.clear();
     this.syncButtons();
   }
   private syncButtons() {
+    document.getElementById('jump')?.classList.toggle('held', this.vertical < 0);
+    document.getElementById('dive')?.classList.toggle('held', this.vertical > 0);
     for (const [id, codes] of [
       ['left', ['ArrowLeft', 'KeyA']],
       ['right', ['ArrowRight', 'KeyD']],

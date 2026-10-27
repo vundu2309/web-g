@@ -1,31 +1,40 @@
 import {palette, colorNumber} from './palette.ts';
-export const backgroundTones = {
-  clouds: [palette.cream, palette.skyHorizon, palette.skyTop, palette.skyWarm, palette.mountainSnow],
-  far: [palette.mountainSnow, palette.mountain, palette.skyTop, palette.soilMoon, palette.soilRuins],
-  near: [palette.mountain, palette.forestShade, palette.soilRiver, palette.soilMoon, palette.soilPine],
-  forest: [palette.forestLeaf, palette.pine, palette.forestShade, palette.soilMoon, palette.soilForest],
-};
-export type BackgroundLayer = keyof typeof backgroundTones;
-const layerNumbers: Record<BackgroundLayer, readonly number[]> = {
-  clouds: backgroundTones.clouds.map(colorNumber),
-  far: backgroundTones.far.map(colorNumber),
-  near: backgroundTones.near.map(colorNumber),
-  forest: backgroundTones.forest.map(colorNumber),
-};
-export function mixColor(from: number, to: number, amount: number) {
-  const t = Math.max(0, Math.min(1, amount));
-  const channel = (shift: number) => Math.round(((from >> shift) & 255) * (1 - t) + ((to >> shift) & 255) * t);
-  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
-}
-/** Blend 320 units on either side of each 3200-unit region border; one tone per region, no allocations. */
-export function regionTone(x: number, tones: readonly number[]) {
-  x = Math.max(0, Math.min(15999, x));
-  const zone = Math.floor(x / 3200);
-  const local = x % 3200;
-  if (zone > 0 && local < 320) return mixColor(tones[zone - 1], tones[zone], (local + 320) / 640);
-  if (zone < 4 && local > 2880) return mixColor(tones[zone], tones[zone + 1], (local - 2880) / 640);
-  return tones[zone];
-}
-export function regionColor(x: number, layer: BackgroundLayer) {
-  return regionTone(x, layerNumbers[layer]);
-}
+import {splitChannels} from '../domain/backdrop/mix.ts';
+
+/**
+ * Hệ số cuộn của từng lớp nền, từ xa đến gần. Lớp rừng xa (0,40) là lớp thêm mới ở T4;
+ * các hệ số khác giữ như bản cũ (mây 0,04; núi xa 0,14; núi giữa 0,30; rừng gần 0,55).
+ */
+export const LAYER_FACTORS = {
+  clouds: 0.04,
+  mountainFar: 0.14,
+  mountainMid: 0.3,
+  forestFar: 0.4,
+  forestNear: 0.55,
+} as const;
+
+export type BackdropLayer = keyof typeof LAYER_FACTORS;
+
+/** Tông theo vùng (mười vùng, nhân với màu nền); ranh giới được nội suy trong domain/backdrop/regions.ts. */
+const REGION_TINTS = [
+  palette.bgTintVale,
+  palette.bgTintPine,
+  palette.bgTintFalls,
+  palette.bgTintMoon,
+  palette.bgTintRuins,
+  palette.bgTintVale,
+  palette.bgTintVale,
+  palette.bgTintPine,
+  palette.bgTintFalls,
+  palette.bgTintFalls,
+].map(colorNumber);
+
+export const TINT_CHANNELS = splitChannels(REGION_TINTS);
+
+/** Vùng 1 và 3 (rừng thông và đèo trăng) dùng cây thông; các vùng khác dùng tán lá rộng. */
+export const PINE_SHARE = [0, 1, 0, 1, 0, 0, 0, 1, 0, 0] as const;
+
+/** Hàng gốc của từng texture, theo pixel nghệ thuật; dùng chung với hàm vẽ nền. */
+export const LANDSCAPE_BASE_ART = {mountainFar: 142, mountainMid: 136, forestFar: 124, forestNear: 150} as const;
+/** Khoảng nâng các lớp xa so với mặt đất gần, theo đơn vị thế giới. */
+export const LANDSCAPE_GROUND_OFFSET = {mountainFar: -104, mountainMid: -64, forestFar: -32, forestNear: 0} as const;

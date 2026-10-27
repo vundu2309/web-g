@@ -59,7 +59,8 @@ test.describe('retina rendering', () => {
     });
     expect(actual.backing).toBeGreaterThanOrEqual(actual.physical);
     expect(actual.resolution).toBe(actual.zoom);
-    await page.locator('#settings').click();
+    await page.locator('#pause').click();
+    await page.locator('#pause-settings').click();
     await page.locator('#quality-low').click();
     expect(await page.evaluate(() => (window as any).forest.viewport.pixelScale)).toBe(4);
   });

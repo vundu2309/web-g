@@ -1,3 +1,4 @@
+import {OCEAN_X} from '../../data/worldLayout.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ConstructionSystem, type BuildingTerrain} from './ConstructionSystem.ts';
@@ -17,6 +18,7 @@ test('every region has several valid dry, flat spots for buildings near the path
   const save = newSave();
   for (const [i, region] of regions.entries()) {
     const end = regions[i + 1]?.x ?? WORLD_WIDTH;
+    if (region.x >= OCEAN_X) continue;
     let found = 0;
     for (let x = region.x + 64; x < end - 64; x += 32) {
       if (system.error(save, x) === '') found++;

@@ -1,0 +1,178 @@
+.inventory-tabs button {
+  flex: 1;
+  padding: var(--pixel-4);
+  font-size: var(--text-fixed-12);
+}
+#action kbd {
+  order: -1;
+  font-size: var(--text-fixed-12);
+}
+
+/* HUD cố định theo CSS pixel, không phóng theo cỡ chữ của hộp thoại. */
+#camp-tools {
+  inset: max(var(--pixel-12), env(safe-area-inset-top)) auto auto max(var(--pixel-12), env(safe-area-inset-left));
+  transform: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  gap: var(--pixel-6);
+}
+#camp-tools button {
+  width: var(--hud-slot);
+  height: var(--hud-slot);
+  min-height: 0;
+  padding: var(--pixel-6);
+  border-width: var(--pixel-2);
+}
+#camp-tools button span {
+  display: none;
+}
+#camp-tools button kbd {
+  font-size: var(--text-fixed-12);
+  top: 0;
+  right: var(--pixel-2);
+}
+#camp-tools .pixel-icon {
+  width: var(--pixel-24);
+  height: var(--pixel-24);
+}
+#game-actions {
+  top: max(var(--pixel-12), env(safe-area-inset-top));
+  right: max(var(--pixel-12), env(safe-area-inset-right));
+  gap: var(--pixel-6);
+  align-items: center;
+}
+#game-actions button {
+  width: var(--hud-slot);
+  height: var(--hud-slot);
+  min-height: 0;
+  padding: var(--pixel-8);
+  border-width: var(--pixel-2);
+}
+#hud-time {
+  padding: var(--pixel-8);
+  background: var(--surface-region);
+  color: var(--cream);
+  font-size: var(--text-fixed-12);
+  border: var(--pixel-2) solid var(--ink);
+  box-shadow: var(--shadow-hard);
+}
+#chapter {
+  top: var(--hud-region-top);
+  max-width: calc(100vw - var(--pixel-32));
+  font-size: var(--text-fixed-12);
+  min-height: 0;
+  padding: var(--pixel-6) var(--pixel-10);
+}
+#controller {
+  display: none;
+}
+#context-action {
+  position: fixed;
+  left: var(--hud-context-x);
+  top: var(--hud-context-y);
+  display: flex;
+  gap: var(--pixel-6);
+  z-index: var(--z-hud);
+}
+#context-action.unavailable {
+  display: none;
+}
+#action {
+  display: flex;
+  align-items: center;
+  gap: var(--pixel-6);
+  padding: var(--pixel-6) var(--pixel-10);
+  min-height: var(--pixel-32);
+  background: var(--button-action);
+  color: var(--ink);
+  border-width: var(--pixel-2);
+  touch-action: none;
+}
+#action .pixel-icon {
+  display: none;
+}
+#action-label {
+  font-size: var(--text-fixed-12);
+}
+
+#action.bite {
+  background: var(--button-bite);
+  outline: var(--pixel-3) solid var(--border-bite);
+}
+#cancel-action {
+  width: var(--pixel-44);
+  min-height: var(--pixel-44);
+  padding: var(--pixel-6);
+}
+@media (pointer: coarse), (max-width: 600px), (max-height: 500px) and (max-width: 1024px) {
+  #camp-tools button,
+  #game-actions button {
+    width: var(--pixel-44);
+    height: var(--pixel-44);
+  }
+
+  #controller {
+    display: flex;
+    inset: auto max(var(--pixel-12), env(safe-area-inset-right)) max(var(--pixel-12), env(safe-area-inset-bottom))
+      max(var(--pixel-12), env(safe-area-inset-left));
+  }
+  .direction-pad {
+    padding: 0;
+    gap: var(--pixel-8);
+    background: none;
+    border: 0;
+  }
+  #left,
+  #right,
+  #jump {
+    width: var(--hud-touch);
+    height: var(--hud-touch);
+    min-height: 0;
+  }
+  .game-button kbd,
+  #action kbd,
+  #camp-tools kbd {
+    display: none;
+  }
+  #context-action,
+  #context-action.unavailable {
+    display: flex;
+    inset: auto max(var(--pixel-12), env(safe-area-inset-right))
+      max(var(--hud-action-bottom), calc(env(safe-area-inset-bottom) + var(--hud-action-bottom))) auto;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  #action {
+    flex-direction: column;
+    justify-content: center;
+    width: var(--hud-touch);
+    height: var(--hud-touch);
+    padding: var(--pixel-2);
+  }
+  #action .pixel-icon {
+    display: block;
+    width: var(--pixel-20);
+    height: var(--pixel-20);
+  }
+  #action-label {
+    font-size: var(--hud-action-font);
+    line-height: var(--leading-1-1);
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 601px) and (min-height: 501px) {
+  #camp-tools button:is(:hover, :focus-visible) span {
+    display: block;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: var(--pixel-8);
+    padding: var(--pixel-6);
+    background: var(--surface-paper);
+    border: var(--pixel-2) solid var(--ink);
+    font-size: var(--text-fixed-12);
+  }
+}

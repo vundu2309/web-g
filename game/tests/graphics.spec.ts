@@ -16,6 +16,7 @@ for (const viewport of viewports) {
     await page.waitForFunction(() => Boolean(window.forest));
     await page.locator('#start').click();
     await page.waitForFunction(() => window.forest.player.body!.blocked.down);
+    await page.waitForFunction(() => window.forest.visuals.outfitsReady);
     await page.evaluate(() => {
       const scene = window.forest;
       scene.game.loop.sleep();
@@ -40,8 +41,12 @@ for (const viewport of viewports) {
         playerRatio: scene.player.displayWidth / scene.player.displayHeight,
         target: (scene.player.x - camera.worldView.x) / camera.worldView.width,
         body: [body.width, body.height, body.bottom - scene.player.y],
-        factors: scene.background.layers.map((layer) => layer.sprite.scrollFactorX),
-        textures: scene.textures.getTextureKeys().length,
+        factors: scene.background.layers.map((layer) => layer.sprites[0].scrollFactorX),
+        textures: scene.textures.getTextureKeys().filter((key) => !/^(terrain-|water-|decor-|tree-|aquatic-)/.test(key))
+          .length,
+        fishTextures: scene.textures.getTextureKeys().filter((key) => key.startsWith('aquatic-')).length,
+        loadedChunks: scene.worldStreamer.stats.loadedChunks,
+        camperSheets: scene.textures.getTextureKeys().filter((key) => key.startsWith('camper-rig:')).length,
       };
     });
     expect(actual.bounds.y).toBeLessThanOrEqual(1);
@@ -54,10 +59,10 @@ for (const viewport of viewports) {
     expect(actual.artHeight).toBeGreaterThanOrEqual(viewport.artHeight[0]);
     expect(actual.artHeight).toBeLessThanOrEqual(viewport.artHeight[1]);
     expect(actual.height).toBeCloseTo(actual.artHeight * 2, 3);
-    expect(actual.playerRatio).toBe(0.75);
+    expect(actual.playerRatio).toBeCloseTo(36 / 48, 6);
     expect(actual.target).toBeCloseTo(0.42, 2);
-    expect(actual.body).toEqual([24, 44, 0]);
-    expect(new Set(actual.factors).size).toBe(4);
+    expect(actual.body).toEqual([24, 74, 0]);
+    expect(new Set(actual.factors).size).toBe(5);
     await page.evaluate(() => window.forest.game.loop.wake());
     await page.waitForTimeout(150);
     await page.screenshot({path: `test-results/graphics-${viewport.width}x${viewport.height}.png`});
@@ -69,11 +74,21 @@ for (const viewport of viewports) {
       scene.keys.clear();
       scene.applyQuality('low');
       return {
-        textures: scene.textures.getTextureKeys().length,
-        visible: scene.background.layers.filter((layer) => layer.sprite.visible).length,
+        textures: scene.textures.getTextureKeys().filter((key) => !/^(terrain-|water-|decor-|tree-|aquatic-)/.test(key))
+          .length,
+        fishTextures: scene.textures.getTextureKeys().filter((key) => key.startsWith('aquatic-')).length,
+        loadedChunks: scene.worldStreamer.stats.loadedChunks,
+        camperSheets: scene.textures.getTextureKeys().filter((key) => key.startsWith('camper-rig:')).length,
+        visible: scene.background.layers.filter((layer) => layer.sprites.some((sprite) => sprite.visible)).length,
       };
     });
     expect(stable.textures).toBe(actual.textures);
+    expect(actual.fishTextures).toBeLessThanOrEqual(15);
+    expect(stable.fishTextures).toBeLessThanOrEqual(15);
+    expect(actual.loadedChunks).toBeLessThanOrEqual(12);
+    expect(stable.loadedChunks).toBeLessThanOrEqual(12);
+    expect(actual.camperSheets).toBe(16);
+    expect(stable.camperSheets).toBe(actual.camperSheets);
     expect(stable.visible).toBe(2);
     await page.evaluate(() => window.forest.game.loop.wake());
     await page.waitForTimeout(150);

@@ -1,9 +1,23 @@
 /** Chooses which camper pose to show. Display only: it never changes physics, fishing or saves. */
 export type PoseName =
-  'idle' | 'run' | 'jump' | 'fall' | 'land' | 'cast' | 'fish-wait' | 'bite' | 'reel' | 'gather' | 'build';
+  | 'idle'
+  | 'run'
+  | 'jump'
+  | 'fall'
+  | 'land'
+  | 'cast'
+  | 'fish-wait'
+  | 'bite'
+  | 'reel'
+  | 'gather'
+  | 'build'
+  | 'swim'
+  | 'dive';
 export type ActionName = 'cast' | 'gather' | 'build';
 export type FishingPhase = 'none' | 'waiting' | 'bite' | 'fight' | 'landed';
 export interface PoseInput {
+  swimming?: boolean;
+  diving?: boolean;
   vx: number;
   vy: number;
   grounded: boolean;
@@ -28,6 +42,12 @@ export class PoseMachine {
     this.actionUntil = clock + ACTION_SECONDS[action];
   }
   update(clock: number, input: PoseInput): PoseName {
+    if (input.swimming) {
+      this.airborne = false;
+      this.action = null;
+      this.landUntil = 0;
+      return this.set(input.diving ? 'dive' : 'swim', clock);
+    }
     const moving = Math.abs(input.vx) > 1;
     if (moving) this.action = null;
     if (!input.grounded) {

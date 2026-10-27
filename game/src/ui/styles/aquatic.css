@@ -1,0 +1,30 @@
+#water-status {
+  position: fixed;
+  top: max(var(--pixel-12), env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 55%;
+  padding: var(--pixel-6) var(--pixel-8);
+  background: var(--surface-dark);
+  color: var(--cream);
+  border: var(--pixel-2) solid var(--border-color);
+  font-size: var(--text-fixed-12);
+  text-align: center;
+  pointer-events: none;
+  z-index: var(--z-hud);
+}
+#dive {
+  width: var(--hud-touch);
+  height: var(--hud-touch);
+  min-height: 0;
+}
+#dive span {
+  font-size: var(--hud-action-font);
+}
+@media (max-width: 600px) {
+  #water-status {
+    top: var(--size-68);
+    max-width: 90%;
+    width: max-content;
+  }
+}

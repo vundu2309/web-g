@@ -11,11 +11,22 @@ export class TileGrid {
   readonly cols: number;
   readonly rows: number;
   private readonly data: TerrainData;
+  private readonly waterTops: Int16Array;
+  private readonly waterBeds: Int16Array;
 
   constructor(data: TerrainData) {
     this.data = data;
     this.cols = data.cols;
     this.rows = data.rows;
+    this.waterTops = new Int16Array(data.cols).fill(-1);
+    this.waterBeds = new Int16Array(data.cols).fill(-1);
+    for (let c = 0; c < data.cols; c++) {
+      for (let r = 0; r < data.rows; r++) {
+        if (data.water[r * data.cols + c] !== 1) continue;
+        if (this.waterTops[c] < 0) this.waterTops[c] = r;
+        this.waterBeds[c] = r + 1;
+      }
+    }
   }
 
   /** Cột chứa tọa độ x thế giới, kẹp trong lưới. */
@@ -23,6 +34,12 @@ export class TileGrid {
     return Math.max(0, Math.min(this.cols - 1, Math.floor(x / TILE)));
   }
 
+  waterSurfaceRow(c: number) {
+    return this.waterTops[Math.max(0, Math.min(this.cols - 1, c))];
+  }
+  waterBedRow(c: number) {
+    return this.waterBeds[Math.max(0, Math.min(this.cols - 1, c))];
+  }
   /** Hàng mặt đất của cột (hàng đầu tiên thuộc đất). */
   surfaceRow(c: number) {
     return this.data.surface[Math.max(0, Math.min(this.cols - 1, c))];

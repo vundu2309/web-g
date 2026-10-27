@@ -4,6 +4,10 @@ import {recipes} from '../camping';
 import {waterAt, waterDirections, regionAt} from '../data/world';
 export function interact(scene: CampingScene) {
   if (scene.status !== 'play' || scene.ui.modalOpen) return;
+  if (scene.aquatic.swimming.active) {
+    scene.ui.toast('Nổi lên bờ hoặc lối gỗ để câu cá và dùng công trình.');
+    return;
+  }
   if (!(scene.player.body as Phaser.Physics.Arcade.Body).blocked.down) {
     scene.ui.toast('Đứng vững trên mặt đất trước nhé.');
     return;
@@ -32,6 +36,7 @@ export function interact(scene: CampingScene) {
       scene.ui.toast('Phao chưa chìm. Chờ cá cắn câu!');
       return;
     }
+    scene.aquatic.caught();
     scene.persist();
     scene.ui.toast(
       'Câu được ' +
@@ -60,7 +65,10 @@ export function interact(scene: CampingScene) {
   const lake = waterAt(scene.player.x);
   if (lake) {
     scene.clearControls();
-    scene.fishingSystem.cast(lake, scene.state.rod, scene.state.time);
+    if (!scene.aquatic.cast(lake)) {
+      scene.ui.toast('Cá đang ẩn nấp. Thử đổi chỗ hoặc chờ đàn cá quay lại.');
+      return;
+    }
     scene.visuals.act('cast', scene.clock);
     scene.ui.toast('Đã thả câu tại ' + lake.name + '. Nhấn E khi phao chìm!');
     scene.refreshHUD();
@@ -72,29 +80,41 @@ export function refreshHUD(scene: CampingScene) {
   const node = scene.nearbyNode(),
     lake = waterAt(scene.player.x);
   const building = scene.activities.nearby(scene.player.x);
-  const actionLabel = scene.selected
-    ? 'Đặt ' + recipes[scene.selected].name
-    : scene.fishing?.phase === 'bite'
-      ? 'Móc cá!'
-      : scene.fishing?.phase === 'fight'
-        ? 'Giữ để kéo'
-        : scene.fishing
-          ? 'Chờ cá…'
-          : building
-            ? 'Mở ' + recipes[building.kind].name
-            : node
-              ? node.kind === 'wood'
-                ? 'Nhặt gỗ'
-                : 'Nhặt đá'
-              : lake
-                ? 'Câu cá'
-                : 'Tương tác';
+  const actionLabel = scene.aquatic.swimming.active
+    ? 'Đang bơi'
+    : scene.selected
+      ? 'Đặt ' + recipes[scene.selected].name
+      : scene.fishing?.phase === 'bite'
+        ? 'Móc cá!'
+        : scene.fishing?.phase === 'fight'
+          ? 'Giữ để kéo'
+          : scene.fishing
+            ? 'Chờ cá…'
+            : building
+              ? 'Mở ' + recipes[building.kind].name
+              : node
+                ? node.kind === 'wood'
+                  ? 'Nhặt gỗ'
+                  : 'Nhặt đá'
+                : lake
+                  ? 'Câu cá'
+                  : 'Tương tác';
   const model = scene.hudModel;
+  model.aquatic = {
+    near: scene.aquatic.nearWater,
+    active: scene.aquatic.swimming.active,
+    air: scene.aquatic.swimming.air,
+    surfacing: scene.aquatic.swimming.surfacing,
+  };
   model.state = scene.state;
   model.status = scene.status;
   model.location = lake?.name ?? regionAt(scene.player.x).name;
   model.actionLabel = actionLabel;
   model.bite = scene.fishing?.phase === 'bite';
   model.cancelVisible = Boolean(scene.selected || scene.fishing);
+  const view = scene.cameras.main.worldView;
+  const anchor = (model.anchor ??= {x: 0, y: 0});
+  anchor.x = Math.max(5, Math.min(75, Math.round(((scene.player.x - view.x) / view.width) * 1000) / 10));
+  anchor.y = Math.max(20, Math.min(80, Math.round(((scene.player.y + 20 - view.y) / view.height) * 1000) / 10));
   scene.ui.renderHUD(model);
 }

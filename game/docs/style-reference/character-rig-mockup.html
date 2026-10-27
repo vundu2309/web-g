@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phác thảo nhân vật — Pixel Forest</title>
+<style>
+:root{--ink:#263d31;--cream:#f0e4be;--gold:#d9b973;--pine:#415f44;--bg:#16221e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--cream);font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:16px 20px 4px;max-width:1500px;margin:0 auto}
+h1{margin:0 0 2px;font-size:20px}
+header p{margin:0;color:#b9c4a8}
+.bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px;max-width:1500px;margin:0 auto}
+button{font:700 13px system-ui,sans-serif;color:var(--cream);background:var(--pine);border:3px solid var(--ink);border-radius:0;padding:7px 12px;cursor:pointer;box-shadow:3px 3px 0 #0e1a14}
+button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:16px;padding:6px 20px 30px;max-width:1500px;margin:0 auto}
+.card{background:#213a2f;border:3px solid var(--ink);padding:12px 14px}
+.card h2{margin:0 0 2px;font-size:16px;color:var(--gold)}
+.card p{margin:0 0 8px;color:#b9c4a8;font-size:13px}
+canvas{display:block;image-rendering:pixelated;border:3px solid var(--ink);background:#000;max-width:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+small{color:#9fb08e}
+</style>
+</head>
+<body>
+<header>
+  <h1>Phác thảo nhân vật — 3 phương án (tỉ lệ cơ thể và chuyển động)</h1>
+  <p>Cùng một bộ xương có khớp gối và khuỷu: bàn chân luôn chạm đất, tay vung ngược chân, thân nghiêng khi chạy. Mỗi phương án khác nhau về tỉ lệ. Art gốc, chỉ để duyệt.</p>
+</header>
+<div class="bar" id="bar">
+  <button data-mode="day" aria-pressed="true">Ngày</button>
+  <button data-mode="night" aria-pressed="false">Đêm có lửa</button>
+  <button id="bSlow" aria-pressed="false">Chậm</button>
+  <button id="bGrid" aria-pressed="false">Lưới ô 16</button>
+</div>
+<div class="grid" id="grid"></div>
+<script>
+'use strict';
+const W=40,H=60,G=H-6; // khung, mặt đất
+const hex=s=>[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];
+const T={
+ skin:['#f8d8b6','#edc59f','#d2a07a','#a8775a'].map(hex),
+ hair:['#8a5a3a','#6e4328','#52311d','#3a2314'].map(hex),
+ hat:['#dcc48a','#bda46e','#97814f','#6f5f3a'].map(hex),
+ shirt:['#f6eed4','#ded2a9','#b9ad84','#8e8463'].map(hex),
+ pants:['#6a7f72','#4e5e56','#3b4943','#2a352f'].map(hex),
+ boot:['#745a49','#523d31','#3a2b23','#241a15'].map(hex),
+ bag:['#c8946a','#a1754d','#7c5838','#563b25'].map(hex),
+ strap:['#8a6a44','#6b4f2c','#4e381f','#3a2a16'].map(hex),
+ scarf:['#e8856a','#c24a3a','#8f3328','#5f2018'].map(hex),
+ belt:['#d9b973','#b9954f','#8a6c34','#5c4520'].map(hex),
+ rod:['#b48a58','#8a6238','#664422','#4a2f18'].map(hex),
+};
+const dk=t=>[t[1],t[2],t[3],t[3]];
+const EYE=hex('#2b2118'),BLUSH=hex('#e29a8a'),MOUTH=hex('#a8654f'),FEATHER=hex('#e8e0c0');
+const rad=d=>d*Math.PI/180;
+const LGT=[-0.6,-0.8];
+function shadeIdx(nx,ny){const d=nx*LGT[0]+ny*LGT[1];return d>0.5?0:d>-0.05?1:d>-0.55?2:3}
+function newG(){return new Array(W*H).fill(null)}
+function put(g,x,y,c){x=Math.floor(x);y=Math.floor(y);if(x>=0&&y>=0&&x<W&&y<H)g[y*W+x]=c}
+function capsule(g,ax,ay,bx,by,r0,r1,tones){
+  const r=Math.max(r0,r1),minx=Math.floor(Math.min(ax,bx)-r-1),maxx=Math.ceil(Math.max(ax,bx)+r+1);
+  const miny=Math.floor(Math.min(ay,by)-r-1),maxy=Math.ceil(Math.max(ay,by)+r+1);
+  const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy||1e-6;
+  for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++){
+    const px=x+.5,py=y+.5;let t=((px-ax)*dx+(py-ay)*dy)/len2;t=Math.max(0,Math.min(1,t));
+    const qx=ax+t*dx,qy=ay+t*dy,ddx=px-qx,ddy=py-qy,d=Math.hypot(ddx,ddy),rr=r0+(r1-r0)*t;
+    if(d<=rr){const nx=d?ddx/d:0,ny=d?ddy/d:-1;put(g,x,y,tones[shadeIdx(nx,ny)])}}}
+function ellipse(g,cx,cy,rx,ry,tones,skip){
+  for(let y=Math.floor(cy-ry-1);y<=Math.ceil(cy+ry+1);y++)for(let x=Math.floor(cx-rx-1);x<=Math.ceil(cx+rx+1);x++){
+    const a=(x+.5-cx)/rx,b=(y+.5-cy)/ry;if(a*a+b*b<=1){if(skip&&skip(x,y))continue;const n=Math.hypot(a,b)||1;put(g,x,y,tones[shadeIdx(a/n,b/n)])}}}
+function line(g,x0,y0,x1,y1,c){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);
+  const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
+  for(;;){put(g,x0,y0,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+
+/* ---------- Ba phương án tỉ lệ ---------- */
+const VARS={
+ A:{name:'A · Cân đối (kiểu Terraria)',note:'Cao ~40 px. Đầu ~1/4 chiều cao, chân dài, thân gọn. Dễ đọc động tác, hợp ô 16×16.',
+   Lt:10,Lu:8,Ll:8,La:5.5,Lf:5,legR:1.7,armR:1.25,torso:[3.1,3.6],head:[4.3,4.7],brim:6.6,crown:[3.9,2.9],eye:1,scarf:false,feather:false},
+ B:{name:'B · Dễ thương (cozy)',note:'Cao ~32 px. Đầu to, chân ngắn, tay ngắn. Giống phong cách làm nông ấm cúng, dễ thương nhưng ít dáng chạy.',
+   Lt:6.5,Lu:4.8,Ll:4.8,La:4,Lf:3.6,legR:1.9,armR:1.45,torso:[3.5,3.9],head:[5.8,5.8],brim:8,crown:[5,3.4],eye:2,scarf:false,feather:false},
+ C:{name:'C · Dũng sĩ cao',note:'Cao ~46 px. Chân và thân dài, có khăn quàng, lông vũ trên mũ, đai thắt lưng. Dáng chạy rõ nhất, nhưng cần nhiều không gian màn hình.',
+   Lt:12,Lu:10,Ll:10,La:6.5,Lf:6,legR:1.9,armR:1.4,torso:[3.4,4.1],head:[4.2,4.6],brim:6.8,crown:[3.9,3],eye:1,scarf:true,feather:true}
+};
+
+/* ---------- Tư thế ---------- */
+function pose(name,i){
+  const s=Math.sin,c=Math.cos;
+  if(name==='idle'){const b=i%2?0.6:0;return{lean:2,bob:b,nl:{t:7,f:4},fl:{t:-7,f:5},na:{a:7,f:12},fa:{a:-5,f:10},ground:true,hd:[0,0]}}
+  if(name==='run'){const p=i/8*Math.PI*2;
+    const fl=ph=>({t:40*s(ph),f:10+78*Math.pow(Math.max(0,c(ph)),1.2)});
+    return{lean:11,bob:0,nl:fl(p),fl:fl(p+Math.PI),na:{a:-52*s(p),f:60+18*c(p)},fa:{a:52*s(p),f:60-18*c(p)},ground:true,hd:[0.4,0]}}
+  if(name==='jump')return{lean:5,bob:0,nl:{t:58,f:88},fl:{t:-12,f:42},na:{a:118,f:28},fa:{a:78,f:22},ground:false,air:6,hd:[0.5,-0.4]};
+  if(name==='fall')return{lean:-2,bob:0,nl:{t:22,f:12},fl:{t:-22,f:16},na:{a:140,f:8},fa:{a:118,f:12},ground:false,air:8,hd:[0,0.2]};
+  if(name==='cast')return{lean:5,bob:0,nl:{t:14,f:6},fl:{t:-14,f:4},na:{a:82,f:22},fa:{a:66,f:26},ground:true,rod:true,hd:[0.4,0]};
+  if(name==='reel')return{lean:-8,bob:0,nl:{t:22,f:10},fl:{t:-20,f:8},na:{a:46,f:100},fa:{a:34,f:96},ground:true,rod:true,hd:[-0.2,0]};
+  if(name==='gather')return{lean:38,bob:0,nl:{t:48,f:92},fl:{t:30,f:84},na:{a:62,f:18},fa:{a:48,f:20},ground:true,hd:[1,0.6]};
+  return pose('idle',0);
+}
+
+function drawChar(v,pname,i){
+  const g=newG(),P=pose(pname,i),cx=18;
+  const R=rad;
+  // toạ độ cục bộ: hông tại (0,0)
+  const hip=[0,0],lean=R(P.lean);
+  const sh=[hip[0]+v.Lt*Math.sin(lean),hip[1]-v.Lt*Math.cos(lean)];
+  const hy=v.head[1]+0.6;
+  const head=[sh[0]+hy*Math.sin(lean)+P.hd[0],sh[1]-hy*Math.cos(lean)+P.hd[1]];
+  function leg(L,root){const t=R(L.t),f=R(L.f);
+    const k=[root[0]+v.Lu*Math.sin(t),root[1]+v.Lu*Math.cos(t)],ts=t-f,a=[k[0]+v.Ll*Math.sin(ts),k[1]+v.Ll*Math.cos(ts)];
+    return{root,k,a}}
+  const nl=leg(P.nl,[hip[0]+0.7,hip[1]]),fl=leg(P.fl,[hip[0]-0.7,hip[1]]);
+  const footBottom=l=>l.a[1]+1.5;
+  let maxFoot=Math.max(footBottom(nl),footBottom(fl));
+  // đặt mặt đất
+  const oy=P.ground?G-maxFoot:G-maxFoot-(P.air||0)-(P.bob||0), ox=cx;
+  const X=x=>x+ox,Y=y=>y+oy+(P.bob||0);
+  function arm(A,root){const a=R(A.a),f=R(A.f),e=[root[0]+v.La*Math.sin(a),root[1]+v.La*Math.cos(a)],fa=a+f,h=[e[0]+v.Lf*Math.sin(fa),e[1]+v.Lf*Math.cos(fa)];return{root,e,h}}
+  const na=arm(P.na,[sh[0]+0.6,sh[1]+1.1]),fa=arm(P.fa,[sh[0]-0.6,sh[1]+1.1]);
+  const cap=(a,b,r0,r1,t)=>capsule(g,X(a[0]),Y(a[1]),X(b[0]),Y(b[1]),r0,r1,t);
+  const boot=(l,t)=>{capsule(g,X(l.a[0]),Y(l.a[1]),X(l.a[0]+2.6),Y(l.a[1]+0.2),1.6,1.5,t)};
+  // sau → trước
+  cap(fa.root,fa.e,v.armR,v.armR*0.9,dk(T.shirt));cap(fa.e,fa.h,v.armR*0.9,v.armR*0.8,dk(T.shirt));ellipse(g,X(fa.h[0]),Y(fa.h[1]),1.25,1.25,dk(T.skin));
+  cap(fl.root,fl.k,v.legR,v.legR*0.95,dk(T.pants));cap(fl.k,fl.a,v.legR*0.95,v.legR*0.8,dk(T.pants));boot(fl,dk(T.boot));
+  // balo (lệch nhịp theo thân)
+  const bx=sh[0]-v.torso[1]-1.6,by=sh[1]+2.6;
+  capsule(g,X(bx),Y(by),X(bx-0.3),Y(by+v.Lt*0.62),2.6,2.4,T.bag);
+  // thân
+  capsule(g,X(hip[0]),Y(hip[1]-0.3),X(sh[0]),Y(sh[1]+0.4),v.torso[0],v.torso[1],T.shirt);
+  // nẹp áo + đai
+  line(g,X(sh[0]+0.8),Y(sh[1]+1.5),X(hip[0]+0.8),Y(hip[1]-1.5),T.shirt[2]);
+  capsule(g,X(hip[0]-v.torso[0]+0.3),Y(hip[1]),X(hip[0]+v.torso[0]-0.3),Y(hip[1]),0.9,0.9,T.belt);
+  put(g,X(hip[0]+1),Y(hip[1]),hex('#f0e0a0'));
+  // quai balo chéo ngực
+  line(g,X(sh[0]-1.4),Y(sh[1]+0.5),X(hip[0]+1.2),Y(hip[1]-2.5),T.strap[1]);
+  // chân gần
+  cap(nl.root,nl.k,v.legR,v.legR*0.95,T.pants);cap(nl.k,nl.a,v.legR*0.95,v.legR*0.8,T.pants);boot(nl,T.boot);
+  // khăn
+  if(v.scarf){capsule(g,X(sh[0]-0.2),Y(sh[1]+0.2),X(sh[0]+1.2),Y(sh[1]+0.4),2.3,2.6,T.scarf);capsule(g,X(sh[0]-1.8),Y(sh[1]+0.6),X(sh[0]-3.6-Math.sin(lean)*3),Y(sh[1]+3.6),1.0,0.8,T.scarf)}
+  // đầu
+  const [rx,ry]=v.head,hx=X(head[0]),hyy=Y(head[1]);
+  ellipse(g,hx-0.9,hyy-0.2,rx*0.95,ry*0.95,T.hair);
+  ellipse(g,hx+0.4,hyy+0.5,rx*0.92,ry*0.92,T.skin);
+  // mặt
+  const ex=Math.round(hx+rx*0.42),ey=Math.round(hyy-0.2);
+  if(v.eye===2){put(g,ex,ey-1,EYE);put(g,ex+1,ey-1,EYE);put(g,ex,ey,EYE);put(g,ex+1,ey,EYE);put(g,ex,ey+1,EYE);put(g,ex,ey-1,[255,255,255]); put(g,ex,ey-1,EYE)}
+  else{put(g,ex,ey,EYE);put(g,ex,ey+1,EYE)}
+  put(g,Math.round(hx+rx*0.88),Math.round(hyy+1),T.skin[1]);put(g,Math.round(hx+rx*0.88),Math.round(hyy+1),T.skin[2]);
+  put(g,Math.round(hx+rx*0.55),Math.round(hyy+2.4),MOUTH);
+  put(g,Math.round(hx+rx*0.2),Math.round(hyy+1.6),BLUSH);
+  // tóc mái và mũ
+  const brimY=hyy-ry*0.58;
+  ellipse(g,hx-0.2,brimY+0.5,rx*0.9,1.0,T.hair);
+  ellipse(g,hx+0.3,brimY-v.crown[1]*0.55,v.crown[0],v.crown[1],T.hat);
+  ellipse(g,hx+0.6,brimY,v.brim,1.6,T.hat);
+  capsule(g,X(head[0]-v.crown[0]+0.6),Y(head[1])-ry*0.58-0.6,X(head[0]+v.crown[0]+0.6),Y(head[1])-ry*0.58-0.6,0.7,0.7,T.strap);
+  if(v.feather){line(g,hx+v.crown[0]-1,brimY-1.5,hx+v.crown[0]+2.5,brimY-6,FEATHER);line(g,hx+v.crown[0]-1,brimY-2.5,hx+v.crown[0]+2.5,brimY-6,T.hat[0])}
+  // tay gần (trên cùng)
+  cap(na.root,na.e,v.armR,v.armR*0.9,T.shirt);cap(na.e,na.h,v.armR*0.9,v.armR*0.8,T.shirt);ellipse(g,X(na.h[0]),Y(na.h[1]),1.3,1.3,T.skin);
+  if(P.rod){const hx0=X(na.h[0]),hy0=Y(na.h[1]);line(g,hx0-2,hy0+2,hx0+10,hy0-9,T.rod[2]);line(g,hx0-2,hy0+1,hx0+10,hy0-10,T.rod[1]);}
+  return selOut(g);
+}
+function selOut(g){const out=g.slice();
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,c=g[i];if(!c)continue;
+    const edge=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const nx=x+dx,ny=y+dy;return nx<0||ny<0||nx>=W||ny>=H||!g[ny*W+nx]});
+    if(edge)out[i]=[c[0]*.66,c[1]*.66,c[2]*.7]}
+  return out}
+
+/* ---------- Nền và ánh sáng ---------- */
+function bgPix(mode,x,y,scroll){
+  if(y>=G+1){ // đất
+    const d=y-(G+1);if(d<2)return hex(d===0?'#86c45a':'#56933c');
+    const n=((x+scroll)*7+y*13)%11;return n<2?hex('#5b3f2b'):n<6?hex('#6e4b33'):hex('#7d583b')}
+  const t=y/G;
+  if(mode==='day'){return [63+(211-63)*t,134+(237-134)*t,214+(246-214)*t]}
+  return [8+(40-8)*t,12+(60-12)*t,40+(110-40)*t];
+}
+function compose(g,mode,scroll){
+  const buf=new Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let col=g[y*W+x],base=bgPix(mode,x,y,scroll||0);
+    if(col&&mode==='night'){const warm=Math.max(0,Math.min(1,(x-6)/(W-6)));
+      const tint=[.32+.68*warm*1.0,.4+.45*warm,.66-.2*warm];col=[col[0]*tint[0],col[1]*tint[1],col[2]*tint[2]];}
+    if(!col&&mode==='night'){const warm=Math.max(0,Math.min(1,(x-14)/(W-14)));base=[base[0]+80*warm*warm,base[1]+45*warm*warm,base[2]+10*warm*warm]}
+    buf[y*W+x]=col||base}
+  return buf}
+function blit(cv,bufs,scale,cols,grid){
+  const w=W*scale,h=H*scale;cv.width=w*cols;cv.height=h*Math.ceil(bufs.length/cols);
+  const ctx=cv.getContext('2d');ctx.fillStyle='#213a2f';ctx.fillRect(0,0,cv.width,cv.height);
+  bufs.forEach((b,idx)=>{const ox=(idx%cols)*w,oy=Math.floor(idx/cols)*h;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=b[y*W+x];ctx.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';ctx.fillRect(ox+x*scale,oy+y*scale,scale,scale)}
+    if(grid){ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<=W;x+=16){ctx.moveTo(ox+x*scale+.5,oy);ctx.lineTo(ox+x*scale+.5,oy+h)}for(let y=G+1;y>=0;y-=16){ctx.moveTo(ox,oy+y*scale+.5);ctx.lineTo(ox+w,oy+y*scale+.5)}ctx.stroke()}});
+}
+
+/* ---------- Giao diện ---------- */
+const st={mode:'day',slow:false,grid:false};
+const grid=document.getElementById('grid');
+const cards={};
+for(const k of Object.keys(VARS)){
+  const v=VARS[k],el=document.createElement('div');el.className='card';
+  el.innerHTML='<h2>'+v.name+'</h2><p>'+v.note+'</p><div class="row"><div><canvas id="anim'+k+'"></canvas><small>Chạy (động)</small></div><div><canvas id="sheet'+k+'"></canvas><small>Hàng trên: đứng · nhảy · rơi · ném cần · kéo cá · nhặt · đứng(2) | hàng dưới: 8 khung chạy</small></div></div>';
+  grid.appendChild(el);cards[k]={anim:el.querySelector('#anim'+k),sheet:el.querySelector('#sheet'+k)}}
+function sheet(k){const v=VARS[k],list=[['idle',0],['jump',0],['fall',0],['cast',0],['reel',0],['gather',0],['idle',1]];
+  for(let i=0;i<8;i++)list.push(['run',i]);
+  return list.map(([n,i])=>compose(drawChar(v,n,i),st.mode,0))}
+function renderSheets(){for(const k of Object.keys(VARS)){const bufs=sheet(k);blit(cards[k].sheet,bufs,2,8,st.grid)}}
+let frame=0,last=0,scroll=0;
+function tick(ts){const dt=st.slow?220:110;
+  if(ts-last>dt){last=ts;frame++;scroll+=3;
+    for(const k of Object.keys(VARS)){const b=compose(drawChar(VARS[k],'run',frame%8),st.mode,scroll);blit(cards[k].anim,[b],6,1,st.grid)}}
+  requestAnimationFrame(tick)}
+document.getElementById('bar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.mode){st.mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))}
+  else if(b.id==='bSlow'){st.slow=!st.slow;b.setAttribute('aria-pressed',String(st.slow))}
+  else if(b.id==='bGrid'){st.grid=!st.grid;b.setAttribute('aria-pressed',String(st.grid))}
+  renderSheets()});
+renderSheets();requestAnimationFrame(tick);
+</script>
+</body>
+</html>

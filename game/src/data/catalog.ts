@@ -1,3 +1,4 @@
+import {palette} from './palette.ts';
 export type Slot = 'hat' | 'shirt' | 'pants' | 'backpack';
 export const slots: Record<Slot, string> = {
   hat: 'Mũ',
@@ -6,18 +7,18 @@ export const slots: Record<Slot, string> = {
   backpack: 'Balo',
 };
 const starterGear = [
-  {id: 'hat-ranger', slot: 'hat', name: 'Mũ kiểm lâm', color: '#bda46e'},
-  {id: 'hat-knit', slot: 'hat', name: 'Mũ len rừng', color: '#b65d43'},
-  {id: 'shirt-linen', slot: 'shirt', name: 'Áo vải dã ngoại', color: '#ded2a9'},
-  {id: 'shirt-pine', slot: 'shirt', name: 'Áo khoác thông', color: '#4c7560'},
-  {id: 'pants-trail', slot: 'pants', name: 'Quần leo núi', color: '#4e5e56'},
-  {id: 'pants-denim', slot: 'pants', name: 'Quần denim', color: '#526d8e'},
-  {id: 'bag-canvas', slot: 'backpack', name: 'Balo vải bố', color: '#a1754d'},
-  {id: 'bag-moss', slot: 'backpack', name: 'Balo rêu', color: '#617a50'},
+  {id: 'hat-ranger', slot: 'hat', name: 'Mũ kiểm lâm', color: palette.hat},
+  {id: 'hat-knit', slot: 'hat', name: 'Mũ len rừng', color: palette.gearHatKnit},
+  {id: 'shirt-linen', slot: 'shirt', name: 'Áo vải dã ngoại', color: palette.shirt},
+  {id: 'shirt-pine', slot: 'shirt', name: 'Áo khoác thông', color: palette.gearShirtPine},
+  {id: 'pants-trail', slot: 'pants', name: 'Quần leo núi', color: palette.pants},
+  {id: 'pants-denim', slot: 'pants', name: 'Quần denim', color: palette.gearPantsDenim},
+  {id: 'bag-canvas', slot: 'backpack', name: 'Balo vải bố', color: palette.bag},
+  {id: 'bag-moss', slot: 'backpack', name: 'Balo rêu', color: palette.gearBagMoss},
 ] as const;
 const shopGear = (Object.keys(slots) as Slot[]).flatMap((slot) => [
-  {id: slot + '-adventure', slot, name: slots[slot] + ' thám hiểm', color: '#668d99', price: 80},
-  {id: slot + '-summit', slot, name: slots[slot] + ' đỉnh núi', color: '#b38b58', price: 220},
+  {id: slot + '-adventure', slot, name: slots[slot] + ' thám hiểm', color: palette.gearAdventure, price: 80},
+  {id: slot + '-summit', slot, name: slots[slot] + ' đỉnh núi', color: palette.gearSummit, price: 220},
 ]);
 export const gear: readonly {id: string; slot: Slot; name: string; color: string; price: number}[] = [
   ...starterGear.map((item) => ({...item, price: 0})),
@@ -36,7 +37,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'lake'],
     rarity: 'Thường',
     weight: 35,
-    color: '#93aa71',
+    color: palette.fishPerch,
     min: 12,
     max: 28,
   },
@@ -46,7 +47,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'lake'],
     rarity: 'Thường',
     weight: 30,
-    color: '#b8b6a2',
+    color: palette.fishTilapia,
     min: 18,
     max: 40,
   },
@@ -56,7 +57,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'lake'],
     rarity: 'Ít gặp',
     weight: 18,
-    color: '#d7a15d',
+    color: palette.fishCarp,
     min: 20,
     max: 65,
   },
@@ -66,7 +67,7 @@ const baseFishSpecies = [
     habitats: ['pond'],
     rarity: 'Thường',
     weight: 28,
-    color: '#c9d3bf',
+    color: palette.fishCrucian,
     min: 10,
     max: 25,
   },
@@ -76,7 +77,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'river'],
     rarity: 'Ít gặp',
     weight: 17,
-    color: '#7c8270',
+    color: palette.fishCatfish,
     min: 25,
     max: 75,
   },
@@ -86,7 +87,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'river'],
     rarity: 'Hiếm',
     weight: 8,
-    color: '#647c65',
+    color: palette.fishSnakehead,
     min: 30,
     max: 85,
   },
@@ -96,7 +97,7 @@ const baseFishSpecies = [
     habitats: ['river'],
     rarity: 'Ít gặp',
     weight: 25,
-    color: '#cb9d94',
+    color: palette.fishTrout,
     min: 20,
     max: 55,
   },
@@ -106,7 +107,7 @@ const baseFishSpecies = [
     habitats: ['river'],
     rarity: 'Thường',
     weight: 40,
-    color: '#b5a284',
+    color: palette.fishGoby,
     min: 7,
     max: 18,
   },
@@ -116,7 +117,7 @@ const baseFishSpecies = [
     habitats: ['lake'],
     rarity: 'Hiếm',
     weight: 10,
-    color: '#7ba396',
+    color: palette.fishBass,
     min: 25,
     max: 80,
   },
@@ -126,7 +127,7 @@ const baseFishSpecies = [
     habitats: ['pond', 'lake'],
     rarity: 'Rất hiếm',
     weight: 2,
-    color: '#e1a078',
+    color: palette.fishKoi,
     min: 20,
     max: 60,
   },
@@ -136,7 +137,7 @@ const baseFishSpecies = [
     habitats: ['lake', 'river'],
     rarity: 'Rất hiếm',
     weight: 2,
-    color: '#819faf',
+    color: palette.fishSturgeon,
     min: 45,
     max: 110,
   },
@@ -146,9 +147,39 @@ const baseFishSpecies = [
     habitats: ['river'],
     rarity: 'Rất hiếm',
     weight: 1,
-    color: '#eed58b',
+    color: palette.fishGolden,
     min: 12,
     max: 30,
+  },
+  {
+    id: 'mackerel',
+    name: 'Cá bạc má',
+    habitats: ['sea'],
+    rarity: 'Thường',
+    weight: 30,
+    color: palette.fishTrout,
+    min: 18,
+    max: 40,
+  },
+  {
+    id: 'snapper',
+    name: 'Cá hồng',
+    habitats: ['sea'],
+    rarity: 'Ít gặp',
+    weight: 12,
+    color: palette.fishKoi,
+    min: 25,
+    max: 65,
+  },
+  {
+    id: 'grouper',
+    name: 'Cá mú',
+    habitats: ['sea'],
+    rarity: 'Hiếm',
+    weight: 4,
+    color: palette.fishCatfish,
+    min: 35,
+    max: 100,
   },
 ] as const;
 export const fishSpecies = baseFishSpecies.map((fish) => ({
@@ -159,7 +190,7 @@ export const fishSpecies = baseFishSpecies.map((fish) => ({
       ? ['dawn', 'day', 'dusk']
       : ['dawn', 'day', 'dusk', 'night']) as readonly string[],
 }));
-export type Habitat = 'pond' | 'lake' | 'river';
+export type Habitat = 'pond' | 'lake' | 'river' | 'sea';
 export type FishId = (typeof fishSpecies)[number]['id'];
 export type BuildingKind = 'tent' | 'fire' | 'bench' | 'chest' | 'stall' | 'stove' | 'lantern' | 'fence' | 'plant';
 export const recipes: Record<BuildingKind, {name: string; wood: number; stone: number; description: string}> = {

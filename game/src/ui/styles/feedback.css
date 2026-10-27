@@ -1,19 +1,30 @@
 #toast {
   position: fixed;
   left: 50%;
-  top: 6.25rem;
+  top: var(--size-100);
   transform: translateX(-50%);
   width: max-content;
-  max-width: min(32.5rem, calc(100vw - 2rem));
-  padding: 0.75rem 1.125rem;
+  max-width: min(var(--size-520), calc(100vw - var(--space-32)));
+  padding: var(--space-12) var(--space-18);
   border: var(--border);
-  box-shadow: 4px 4px 0 #213c2b;
-  background: #f1e2b9;
-  color: #304c35;
-  font-size: 0.875rem;
-  font-weight: 800;
-  line-height: 1.5;
+  box-shadow: var(--shadow-feedback-1);
+  background: var(--surface-toast);
+  color: var(--text-toast);
+  font-size: var(--text-14);
+  font-weight: var(--weight-800);
+  line-height: var(--leading-1-5);
   text-align: center;
-  z-index: 4;
+  z-index: var(--z-toast);
   pointer-events: none;
+}
+
+/* DOM chỉ: animation game vẫn theo clock và lựa chọn chất lượng riêng. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

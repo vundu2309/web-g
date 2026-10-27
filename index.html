@@ -10,10 +10,11 @@
     <link rel="preload" href="./fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="./fonts/nunito-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
     <title>Pixel Forest — Trại bên hồ</title>
-    <script type="module" crossorigin src="./assets/index-BfF1o_5M.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CDdASCEs.css">
+    <script type="module" crossorigin src="./assets/index-B7HhhDan.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D_z3LmJS.css">
   </head>
   <body>
+    <!-- Ngoại lệ có chủ đích: icon nhiều tông giữ màu gốc; xem docs/DESIGN.md. -->
     <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <symbol id="px-wood" viewBox="0 0 16 16">
         <path fill="#a77a4b" d="M2 6h12v7H2zM5 3h9v3H5z" />
@@ -63,23 +64,9 @@
       </symbol>
     </svg>
     <div id="game" aria-label="Game Pixel Forest"></div>
-    <header id="hud" aria-label="Hành trang và tiến trình">
-      <div class="portrait-frame"><img id="hud-avatar" alt="Nhân vật của bạn" /></div>
-      <div class="hud-readout">
-        <div id="score" aria-label="Vật liệu">
-          <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
-            <use href="#px-wood" /></svg
-          ><b id="hud-wood">24</b><span class="hud-divider"></span
-          ><svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
-            <use href="#px-stone" /></svg
-          ><b id="hud-stone">16</b><span class="hud-divider"></span><b id="hud-coin">0 xu</b>
-        </div>
-        <span id="effects">0 cá · 0 công trình</span>
-      </div>
-    </header>
     <div id="chapter">
       <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-pin" /></svg
-      ><span>THUNG LŨNG AO SEN</span><b id="hud-time">08:00</b>
+      ><span>THUNG LŨNG AO SEN</span>
     </div>
 
     <div id="welcome">
@@ -100,14 +87,14 @@
       </article>
     </div>
     <nav id="game-actions" aria-label="Menu game">
+      <b id="hud-time">08:00</b>
       <button id="pause" aria-label="Tạm dừng game" title="Tạm dừng (P)">
         <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
           <use href="#px-pause" />
-        </svg></button
-      ><button id="settings" aria-label="Cài đặt" aria-haspopup="dialog" title="Cài đặt">
-        <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-gear" /></svg>
+        </svg>
       </button>
     </nav>
+    <div id="water-status" role="status" hidden></div>
     <footer id="controller" aria-label="Điều khiển game">
       <div class="direction-pad" role="group" aria-label="Di chuyển">
         <button id="left" class="game-button direction-button" aria-label="Di chuyển sang trái">
@@ -119,6 +106,11 @@
             <use href="#px-right" /></svg
           ><kbd>D / →</kbd>
         </button>
+        <button id="dive" class="game-button direction-button" aria-label="Giữ để lặn xuống" hidden>
+          <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path fill="currentColor" d="M6 2h4v6h4l-6 6-6-6h4z" /></svg
+          ><span>Lặn</span><kbd>S / ↓</kbd>
+        </button>
       </div>
       <button id="jump" class="game-button jump-button" aria-label="Nhảy">
         <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-jump" /></svg><span>Nhảy</span
@@ -126,13 +118,16 @@
       </button>
     </footer>
     <div id="camp-tools" role="group" aria-label="Hoạt động cắm trại">
-      <button id="inventory" aria-haspopup="dialog">
+      <button id="inventory" aria-label="Kho đồ (I)" title="Kho đồ (I)" aria-haspopup="dialog">
         <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-bag" /></svg><span>Kho đồ</span
         ><kbd>I</kbd></button
-      ><button id="build" aria-haspopup="dialog">
+      ><button id="build" aria-label="Dựng trại (B)" title="Dựng trại (B)" aria-haspopup="dialog">
         <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-tent" /></svg
-        ><span>Dựng trại</span><kbd>B</kbd></button
-      ><button id="action">
+        ><span>Dựng trại</span><kbd>B</kbd>
+      </button>
+    </div>
+    <div id="context-action">
+      <button id="action">
         <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-hand" /></svg
         ><span id="action-label">Tương tác</span><kbd>E</kbd></button
       ><button id="cancel-action" aria-label="Hủy thao tác" hidden>✕</button>
@@ -197,21 +192,49 @@
           </div>
           <button id="close-inventory" class="icon-button" aria-label="Đóng kho đồ" autofocus>✕</button>
         </div>
-        <p id="inventory-summary"></p>
-        <div class="wardrobe">
-          <img id="camper-preview" alt="Nhân vật với trang bị hiện tại" />
-          <div>
-            <h3>Trang bị của bạn</h3>
-            <p>Đồ mặc định đã có sẵn. Chọn để thay ngay.</p>
+        <header id="inventory-readout">
+          <div class="portrait-frame"><img id="hud-avatar" alt="Nhân vật của bạn" /></div>
+          <div class="hud-readout">
+            <div id="score" aria-label="Vật liệu">
+              <svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <use href="#px-wood" /></svg
+              ><b id="hud-wood">24</b><span class="hud-divider"></span
+              ><svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <use href="#px-stone" /></svg
+              ><b id="hud-stone">16</b><span class="hud-divider"></span><b id="hud-coin">0 xu</b>
+            </div>
+            <span id="effects">0 cá · 0 công trình</span>
           </div>
-        </div>
-        <div id="gear-list"></div>
-        <div class="fish-heading">
-          <h3>Cá đã câu</h3>
-          <span id="fish-summary"></span>
-        </div>
-        <div id="fish-list"></div>
+        </header>
+        <p id="inventory-summary"></p>
+        <nav class="inventory-tabs" aria-label="Nhóm vật phẩm">
+          <button data-inventory-tab="materials" aria-pressed="true">Vật liệu</button
+          ><button data-inventory-tab="equipment" aria-pressed="false">Trang bị</button
+          ><button data-inventory-tab="fish" aria-pressed="false">Cá</button>
+        </nav>
+        <section id="materials-panel">
+          <div id="material-grid"></div>
+          <p>Góp nhặt gỗ và đá để dựng trại. Cần câu và bộ dụng cụ luôn có sẵn.</p>
+        </section>
+        <section id="equipment-panel" hidden>
+          <div class="wardrobe">
+            <img id="camper-preview" alt="Nhân vật với trang bị hiện tại" />
+            <div>
+              <h3>Trang bị của bạn</h3>
+              <p>Đồ mặc định đã có sẵn. Chọn để thay ngay.</p>
+            </div>
+          </div>
+          <div id="gear-list"></div>
+        </section>
+        <section id="fish-panel" hidden>
+          <div class="fish-heading">
+            <h3>Cá đã câu</h3>
+            <span id="fish-summary"></span>
+          </div>
+          <div id="fish-list"></div>
+        </section>
         <p class="hint">Cá được giữ trong kho đồ, không mất khi về trại. Tiến trình lưu trên thiết bị này.</p>
+        <p id="item-detail" role="status">Chọn một vật phẩm để xem chi tiết.</p>
         <button id="done-inventory" class="primary">Xong</button>
       </div>
     </dialog>

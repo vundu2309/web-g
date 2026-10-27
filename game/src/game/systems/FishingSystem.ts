@@ -19,11 +19,13 @@ export type FishingSession = {
 };
 export class FishingSystem {
   session: FishingSession | null = null;
+  private target: Caught | null = null;
   private readonly random: () => number;
   constructor(random: () => number = Math.random) {
     this.random = random;
   }
-  cast(water: {id: string; habitat: Habitat}, rod: RodId = 'bamboo', time = 160) {
+  cast(water: {id: string; habitat: Habitat}, rod: RodId = 'bamboo', time = 160, target: Caught | null = null) {
+    this.target = target;
     this.session = {
       period: periodAt(time),
       phase: 'waiting',
@@ -45,7 +47,12 @@ export class FishingSystem {
     this.session = null;
     return active;
   }
-  update(dt: number, pulling = false, easy = false): 'bite' | 'escaped' | 'broken' | 'caught' | null {
+  update(
+    dt: number,
+    pulling = false,
+    easy = false,
+    readyToBite = true,
+  ): 'bite' | 'escaped' | 'broken' | 'caught' | null {
     const session = this.session;
     if (!session || !Number.isFinite(dt) || dt <= 0) return null;
     if (session.phase === 'landed') return null;
@@ -53,6 +60,7 @@ export class FishingSystem {
     session.remaining -= dt;
     if (session.remaining > 0) return null;
     if (session.phase === 'waiting') {
+      if (!readyToBite) return null;
       session.phase = 'bite';
       session.remaining = 2;
       return 'bite';
@@ -96,13 +104,9 @@ export class FishingSystem {
     const session = this.session;
     if (!session) return null;
     if (session.phase === 'bite') {
-      session.caught = rollFish(
-        session.habitat,
-        this.random(),
-        this.random(),
-        getRod(session.rod).luck,
-        session.period,
-      );
+      session.caught =
+        this.target ??
+        rollFish(session.habitat, this.random(), this.random(), getRod(session.rod).luck, session.period);
       const fish = session.caught;
       const tier = ['Thường', 'Ít gặp', 'Hiếm', 'Rất hiếm'].indexOf(fish.species.rarity);
       session.strength =

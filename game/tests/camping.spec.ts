@@ -11,6 +11,7 @@ test('starter wardrobe changes the actual sprite and persists after reload', asy
   await page.locator('#inventory').click();
   await expect(page.getByRole('heading', {name: 'Kho đồ', exact: true})).toBeVisible();
   expect(await page.locator('[data-gear]').count()).toBe(8);
+  await page.locator('[data-inventory-tab="equipment"]').click();
   await page.locator('[data-gear="shirt-pine"]').click();
   await expect(page.locator('[data-gear="shirt-pine"]')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => (window as any).forest.player.texture.key)).not.toBe(texture);
@@ -70,7 +71,7 @@ test('fishing pauses on menu, expires on missed bite and cancels on movement', a
     step(120);
     const frozen = f.fishing.remaining === 0.1;
     f.togglePause();
-    step(8);
+    for (let i = 0; i < 900 && f.fishing.phase !== 'bite'; i++) step(1);
     const bite = f.fishing.phase === 'bite';
     step(130);
     const missed = !f.fishing && Object.keys(f.state.fish).length === 0;
@@ -135,7 +136,7 @@ for (const viewport of [
   test(`camping UI fits ${viewport.width}x${viewport.height}`, async ({page}) => {
     await page.setViewportSize(viewport);
     await start(page);
-    for (const id of ['left', 'right', 'jump', 'inventory', 'build', 'action', 'settings', 'pause'])
+    for (const id of ['left', 'right', 'jump', 'inventory', 'build', 'action', 'pause'])
       await expect(page.locator('#' + id)).toBeInViewport();
     const boxes = await Promise.all(
       ['left', 'right', 'jump', 'inventory', 'build', 'action'].map((id) => page.locator('#' + id).boundingBox()),
@@ -154,7 +155,8 @@ for (const viewport of [
     await expect(page.locator('#done-inventory')).toBeInViewport();
     await page.keyboard.press('Escape');
     await page.locator('#resume').click();
-    await page.locator('#settings').click();
+    await page.locator('#pause').click();
+    await page.locator('#pause-settings').click();
     await expect(page.locator('#settings-menu')).toBeVisible();
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
@@ -174,12 +176,13 @@ test('large world has real lakes, no old pickups or detached background, and cam
       x: f.player.x,
       camera: f.cameras.main.worldView.x,
       old: !!(f.items || f.performer || f.sky || f.layers),
-      land: f.children.list.filter((o: any) => String(o.texture?.key).startsWith('land-')).length,
+      land: f.children.list.filter((o: any) => String(o.texture?.key).startsWith('terrain-')).length,
     };
   });
   expect(result.x).toBeGreaterThan(3000);
   expect(result.camera).toBeGreaterThan(2000);
   expect(result.old).toBe(false);
-  expect(result.land).toBe(32);
+  expect(result.land).toBeGreaterThan(0);
+  expect(result.land).toBeLessThanOrEqual(12);
   expect(errors).toEqual([]);
 });

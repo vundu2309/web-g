@@ -1,0 +1,139 @@
+#inventory-menu button {
+  min-height: var(--pixel-44);
+  font-size: var(--text-fixed-12);
+}
+#inventory-menu .icon-button {
+  width: var(--pixel-44);
+  height: var(--pixel-44);
+  padding: var(--pixel-6);
+}
+#inventory-menu p,
+#inventory-menu h3 {
+  font-size: var(--text-fixed-12);
+}
+
+/* Kho đồ gọn: dùng dữ liệu thật, không áp đặt giới hạn số ô. */
+#inventory-menu {
+  position: fixed;
+  inset: var(--hud-panel-top) auto auto var(--pixel-12);
+  width: min(var(--hud-panel-width), calc(100vw - var(--pixel-24)));
+  max-height: calc(100dvh - var(--hud-panel-top) - var(--pixel-12));
+  margin: 0;
+  font-size: var(--text-fixed-12);
+}
+#inventory-menu .dialog-content {
+  padding: var(--pixel-12);
+}
+#inventory-menu .dialog-heading h2 {
+  font-size: var(--text-fixed-18);
+}
+#inventory-menu .dialog-heading small,
+#inventory-menu .hint,
+#inventory-summary {
+  display: none;
+}
+#inventory-readout {
+  display: flex;
+  gap: var(--pixel-8);
+  align-items: center;
+  margin: var(--pixel-10) 0;
+}
+#inventory-readout .portrait-frame {
+  width: var(--pixel-44);
+  height: var(--pixel-44);
+}
+#inventory-readout .portrait-frame img {
+  width: var(--pixel-36);
+  height: var(--pixel-36);
+  margin-top: 0;
+}
+#inventory-readout .hud-readout {
+  min-width: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  padding: 0;
+}
+#score {
+  font-size: var(--text-fixed-12);
+  gap: var(--pixel-4);
+}
+#effects {
+  font-size: var(--text-fixed-12);
+}
+.inventory-tabs {
+  display: flex;
+  gap: var(--pixel-4);
+  margin-bottom: var(--pixel-12);
+}
+
+#material-grid,
+#fish-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pixel-6);
+}
+.material-cell {
+  display: grid;
+  place-items: center;
+  gap: var(--pixel-4);
+  padding: var(--pixel-8);
+  background: var(--surface-gear);
+  border: var(--pixel-2) solid var(--border-fish);
+}
+#inventory-menu .wardrobe {
+  padding: var(--pixel-6);
+  gap: var(--pixel-10);
+}
+#inventory-menu .wardrobe img {
+  width: var(--pixel-36);
+  height: var(--pixel-48);
+}
+#inventory-menu .wardrobe p {
+  display: none;
+}
+
+#inventory-menu .fish-heading {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+#inventory-menu .fish-entry {
+  flex-direction: column;
+  text-align: center;
+  gap: var(--pixel-4);
+  padding: var(--pixel-6);
+  min-height: 0;
+}
+#inventory-menu .fish-entry b {
+  margin: 0;
+}
+#gear-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--pixel-6);
+  margin-top: var(--pixel-12);
+}
+#inventory-menu .gear-slot,
+#inventory-menu .gear-options {
+  display: contents;
+}
+#inventory-menu .gear-slot h3,
+#inventory-menu .gear-options span,
+#inventory-menu .gear-options small {
+  display: none;
+}
+#inventory-menu .gear-options button {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: var(--pixel-4);
+}
+#inventory-menu .gear-options i {
+  grid-row: auto;
+}
+#item-detail {
+  border-top: var(--pixel-2) solid var(--border-divider);
+  padding-top: var(--pixel-8);
+  min-height: var(--pixel-44);
+}

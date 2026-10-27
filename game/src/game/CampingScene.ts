@@ -1,3 +1,6 @@
+import {AquaticLife} from './AquaticLife';
+import {WorldStreamer} from './rendering/WorldStreamer';
+import {palette} from '../data/palette';
 import {centerCamera} from './rendering/sceneView';
 import {ParallaxRenderer} from './rendering/ParallaxRenderer';
 import {CampSimulation} from './CampSimulation';
@@ -44,7 +47,9 @@ export class CampingScene extends Phaser.Scene {
     isWet: (x) => Boolean(waterAt(x)),
     resources: resourceNodes,
   });
+  aquatic!: AquaticLife;
   activities!: CampActivities;
+  worldStreamer!: WorldStreamer;
   daylight!: DayNightRenderer;
   background!: ParallaxRenderer;
   fps = {frames: 0, elapsed: 0, average: 0, samples: 0};
@@ -89,13 +94,16 @@ export class CampingScene extends Phaser.Scene {
     this.fishingSystem.cancel();
     this.construction.selected = null;
     this.ui = new GameUI();
-    this.cameras.main.setBackgroundColor('#afc1b0').setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.cameras.main.setBackgroundColor(palette.skyHorizon).setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    const floor = buildWorld(this);
+    const labels: Phaser.GameObjects.Text[] = [];
+    const floor = buildWorld(this, labels);
     this.daylight = new DayNightRenderer(this);
     this.background = new ParallaxRenderer(this);
-    this.visuals = new CampRenderer(this, this.state);
-    this.physics.add.collider(this.player, floor);
+    this.visuals = new CampRenderer(this, this.state, labels);
+    this.worldStreamer = new WorldStreamer(this);
+    this.aquatic = new AquaticLife(this);
+    this.physics.add.collider(this.player, floor, undefined, () => !this.aquatic.swimming.active);
     this.ui.setPortrait(this.visuals.portrait);
     this.controls = new PlayerControls({
       playing: () => this.status === 'play',
@@ -121,6 +129,8 @@ export class CampingScene extends Phaser.Scene {
       this.persist();
       this.controls.dispose();
       this.viewport.dispose();
+      this.aquatic.dispose();
+      this.worldStreamer.dispose();
       this.ui.dispose();
       this.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
       this.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
@@ -167,7 +177,7 @@ export class CampingScene extends Phaser.Scene {
     this.status = 'play';
     this.accumulator = 0;
     this.physics.resume();
-    this.ui.pauseMenu.close();
+    this.ui.closeAll();
     this.refreshHUD();
   }
   start() {
@@ -191,6 +201,7 @@ export class CampingScene extends Phaser.Scene {
     this.ui.closeAll();
     this.cancelAction();
     this.clearControls();
+    this.aquatic.reset();
     this.player.setPosition(120, groundAt(120) - 1).setVelocity(0);
     this.resume();
     this.persist();
@@ -198,7 +209,7 @@ export class CampingScene extends Phaser.Scene {
   openPanel(panel: Panel) {
     if (this.selected || this.fishing) this.cancelAction();
     this.pause();
-    if (panel === 'inventory') this.ui.renderInventory(this.state, this.ui.portraitImage);
+    if (panel === 'inventory') this.ui.renderInventory(this.state, this.visuals.figure);
     if (panel === 'build') this.ui.renderRecipes(this.state, this.visuals.buildingImages);
     this.ui.showPanel(panel);
     this.refreshHUD();
@@ -213,7 +224,7 @@ export class CampingScene extends Phaser.Scene {
   equipItem(id: string) {
     if (equip(this.state, id)) {
       this.ui.setPortrait(this.visuals.refreshAppearance(this.state));
-      this.ui.renderInventory(this.state, this.ui.portraitImage);
+      this.ui.renderInventory(this.state, this.visuals.figure);
       this.persist();
     }
   }
@@ -229,6 +240,7 @@ export class CampingScene extends Phaser.Scene {
       this.start();
       return;
     }
+    if (this.status === 'play' && !this.ui.modalOpen && this.aquatic.jump()) return;
     if (this.status === 'play' && !this.ui.modalOpen && (this.player.body as Phaser.Physics.Arcade.Body).blocked.down) {
       this.cancelAction();
       this.player.setVelocityY(-720);
@@ -297,6 +309,8 @@ export class CampingScene extends Phaser.Scene {
     const frame = this.renderFrame;
     frame.state = this.state;
     frame.fishing = this.fishing;
+    frame.swimming = this.aquatic.swimming.active;
+    frame.diving = this.aquatic.swimming.submerged;
     frame.clock = this.clock;
     frame.quality = this.quality;
     frame.placement = null;
@@ -307,6 +321,7 @@ export class CampingScene extends Phaser.Scene {
       frame.placement = this.placementFrame;
     }
     this.visuals.draw(frame);
+    this.aquatic.draw();
     this.refreshHUD();
   }
 }

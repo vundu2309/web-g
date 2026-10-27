@@ -1,19 +1,19 @@
 import type Phaser from 'phaser';
-import type {SpriteDefinition} from '../../domain/sprite';
+import type {SpriteAnimation} from '../../domain/sprite';
 /** Phaser's registered animation frames, sampled with game time so pause freezes the exact pose. */
 export class ClockSprite {
   private readonly sprite: Phaser.GameObjects.Sprite;
-  private readonly definition: SpriteDefinition;
+  private readonly animations: Readonly<Record<string, SpriteAnimation>>;
   private texture = '';
   private state = '';
   private key = '';
-  constructor(sprite: Phaser.GameObjects.Sprite, definition: SpriteDefinition) {
+  constructor(sprite: Phaser.GameObjects.Sprite, animations: Readonly<Record<string, SpriteAnimation>>) {
     this.sprite = sprite;
-    this.definition = definition;
+    this.animations = animations;
   }
   /** Elapsed seconds since this state began; pausing the game stops elapsed time and freezes the frame. */
   draw(texture: string, state: string, elapsed: number) {
-    const definition = this.definition.animations[state];
+    const definition = this.animations[state];
     if (!definition) return;
     if (texture !== this.texture || state !== this.state) {
       this.texture = texture;
@@ -27,7 +27,7 @@ export class ClockSprite {
   }
   /** Index into the animation’s frame list for an elapsed time, without allocating. */
   indexAt(elapsed: number) {
-    const definition = this.definition.animations[this.state];
+    const definition = this.animations[this.state];
     const animation = this.sprite.scene.anims.get(this.key);
     const index = Math.max(0, Math.floor(elapsed * definition.frameRate));
     return definition.repeat < 0 ? index % animation.frames.length : Math.min(index, animation.frames.length - 1);

@@ -34,3 +34,45 @@ test('fishing phases choose their poses and override ordinary walking', () => {
   assert.equal(machine.update(1, {...ground, fishing: 'bite'}), 'bite');
   assert.equal(machine.update(1.2, {...ground, fishing: 'fight'}), 'reel');
 });
+
+test('every situation picks its own pose: stand, run, jump, fall, land, cast, wait, bite, reel, gather, build', () => {
+  const machine = new PoseMachine();
+  const seen = [
+    machine.update(0, ground),
+    machine.update(0.1, {...ground, vx: 220}),
+    machine.update(0.2, {...ground, grounded: false, vy: -500}),
+    machine.update(0.3, {...ground, grounded: false, vy: 300}),
+    machine.update(0.4, ground),
+  ];
+  machine.start('cast', 0.7);
+  seen.push(machine.update(0.7, {...ground, fishing: 'waiting'}));
+  seen.push(machine.update(1.2, {...ground, fishing: 'waiting'}));
+  seen.push(machine.update(1.4, {...ground, fishing: 'bite'}));
+  seen.push(machine.update(1.6, {...ground, fishing: 'fight'}));
+  seen.push(machine.update(2, {...ground, fishing: 'landed'}));
+  machine.start('gather', 2.1);
+  seen.push(machine.update(2.2, ground));
+  machine.start('build', 3);
+  seen.push(machine.update(3.1, ground));
+  assert.deepEqual(seen, [
+    'idle',
+    'run',
+    'jump',
+    'fall',
+    'land',
+    'cast',
+    'fish-wait',
+    'bite',
+    'reel',
+    'reel',
+    'gather',
+    'build',
+  ]);
+});
+
+test('a landing from a fall lasts its own duration even while a fish is biting', () => {
+  const machine = new PoseMachine();
+  machine.update(0, {...ground, grounded: false, vy: 300});
+  assert.equal(machine.update(1, {...ground, fishing: 'bite'}), 'land');
+  assert.equal(machine.update(1.3, {...ground, fishing: 'bite'}), 'bite');
+});

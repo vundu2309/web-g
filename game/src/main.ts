@@ -1,3 +1,4 @@
+import {palette} from './data/palette';
 import Phaser from 'phaser';
 import './style.css';
 import {CampingScene} from './game/CampingScene';
@@ -5,6 +6,10 @@ import {initialQuality, pixelFrame} from './game/rendering/resolution';
 
 async function boot() {
   await document.fonts.load('800 14px Nunito', 'Ao Sen Gỗ Đá câu cá ế ệ').catch(() => []);
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('styleguide')) {
+    const {openStyleguide} = await import('./ui/styleguide');
+    return openStyleguide();
+  }
   if (import.meta.env.DEV && new URLSearchParams(location.search).has('gallery')) {
     const {openSpriteGallery} = await import('./ui/gallery');
     return openSpriteGallery();
@@ -15,7 +20,7 @@ async function boot() {
     parent: 'game',
     width: frame.canvasWidth,
     height: frame.canvasHeight,
-    backgroundColor: '#afc1b0',
+    backgroundColor: palette.skyHorizon,
     pixelArt: true,
     roundPixels: true,
     antialias: false,

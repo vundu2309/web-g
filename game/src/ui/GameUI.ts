@@ -1,5 +1,6 @@
+import {renderInventory} from './inventoryView';
 import {clockText} from '../domain/dayTime';
-import {gear, slots, fishSpecies, recipes, type Save, type Slot, type BuildingKind} from '../camping';
+import {recipes, type Save, type BuildingKind} from '../camping';
 import type {Quality} from '../game/rendering/resolution';
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => {
   const element = document.getElementById(id);
@@ -30,13 +31,19 @@ export interface HUDModel {
   actionLabel: string;
   bite: boolean;
   cancelVisible: boolean;
+  aquatic?: {near: boolean; active: boolean; air: number; surfacing: boolean};
+  anchor?: {x: number; y: number};
 }
 /** DOM only. Receives state snapshots and emits commands; knows nothing about Phaser. */
 export class GameUI {
   private abort = new AbortController();
   private toastTimer = 0;
   private status?: GameStatus;
-  private portrait = '';
+  private returnFocus?: HTMLElement;
+  private anchorX = Number.NaN;
+  private anchorY = Number.NaN;
+  private regionTimer = 0;
+  private location = '';
   private setText(id: string, text: string) {
     const node = $(id);
     if (node.textContent !== text) node.textContent = text;
@@ -68,8 +75,7 @@ export class GameUI {
       'quality-high': () => actions.quality('high'),
     }))
       on(id, 'click', () => action());
-    for (const id of ['settings', 'welcome-settings', 'pause-settings'])
-      on(id, 'click', () => actions.panel('settings'));
+    for (const id of ['welcome-settings', 'pause-settings']) on(id, 'click', () => actions.panel('settings'));
     for (const panel of ['settings', 'inventory', 'build', 'activity'] as const) {
       for (const id of ['close-' + panel, 'done-' + panel]) on(id, 'click', () => actions.closePanel(panel));
       on(panel + '-menu', 'cancel', (event) => {
@@ -81,7 +87,26 @@ export class GameUI {
       event.preventDefault();
       actions.pause();
     });
+    on('inventory-menu', 'focusin', (event) => {
+      const item = (event.target as Element).closest<HTMLElement>('[data-detail]');
+      if (item) this.setText('item-detail', item.dataset.detail!);
+    });
     on('inventory-menu', 'click', (event) => {
+      const item = (event.target as Element).closest<HTMLElement>('[data-detail]');
+      if (item) this.setText('item-detail', item.dataset.detail!);
+      const tab = (event.target as Element).closest<HTMLButtonElement>('[data-inventory-tab]');
+      if (tab) {
+        for (const button of Array.from(this.inventoryMenu.querySelectorAll<HTMLButtonElement>('[data-inventory-tab]')))
+          button.setAttribute('aria-pressed', String(button === tab));
+        this.setText(
+          'item-detail',
+          tab.dataset.inventoryTab === 'materials'
+            ? 'Gỗ và đá dùng để dựng trại.'
+            : 'Chọn một vật phẩm để xem chi tiết.',
+        );
+        for (const name of ['materials', 'equipment', 'fish'])
+          $(name + '-panel').hidden = name !== tab.dataset.inventoryTab;
+      }
       const button = (event.target as Element).closest<HTMLButtonElement>('[data-gear]');
       if (button && !button.disabled) actions.equip(button.dataset.gear!);
     });
@@ -101,25 +126,30 @@ export class GameUI {
     });
   }
   closeAll() {
+    for (const id of ['inventory', 'build']) $(id).setAttribute('aria-expanded', 'false');
     for (const dialog of [this.pauseMenu, this.settingsMenu, this.inventoryMenu, this.buildMenu, this.activityMenu])
       dialog.close();
+    if (this.returnFocus?.isConnected) this.returnFocus.focus();
+    this.returnFocus = undefined;
   }
   showPanel(panel: Panel) {
     this.closeAll();
+    this.returnFocus = $(
+      panel === 'inventory' || panel === 'build' ? panel : this.status === 'ready' ? 'welcome-settings' : 'pause',
+    );
+    if (panel === 'inventory' || panel === 'build') $(panel).setAttribute('aria-expanded', 'true');
     $<HTMLDialogElement>(panel + '-menu').showModal();
   }
   closePanel(panel: Panel) {
+    if (panel === 'inventory' || panel === 'build') $(panel).setAttribute('aria-expanded', 'false');
     $<HTMLDialogElement>(panel + '-menu').close();
+    if (this.status === 'ready') this.returnFocus?.focus();
   }
   showWelcome(visible: boolean) {
     $('welcome').hidden = !visible;
   }
   setPortrait(image: string) {
-    this.portrait = image;
     $<HTMLImageElement>('hud-avatar').src = image;
-  }
-  get portraitImage() {
-    return this.portrait;
   }
   setQuality(quality: Quality) {
     $('quality-low').setAttribute('aria-pressed', String(quality === 'low'));
@@ -139,10 +169,42 @@ export class GameUI {
     this.setText('hud-stone', String(state.stone));
     this.setText('hud-coin', state.coin + ' xu');
     this.setText('hud-time', clockText(state.time));
+    const aquatic = model.aquatic;
+    $('dive').hidden = !aquatic?.near || status !== 'play';
+    const jumpLabel = aquatic?.active ? 'Nổi lên' : 'Nhảy';
+    $('jump').querySelector('span')!.textContent = jumpLabel;
+    $('jump').setAttribute('aria-label', aquatic?.active ? 'Giữ để bơi lên, nhấn ở mặt nước để nhảy ra' : 'Nhảy');
+    $('water-status').hidden = !aquatic?.near || status !== 'play' || !$('toast').hidden;
+    this.setText(
+      'water-status',
+      aquatic?.active
+        ? aquatic.surfacing
+          ? 'Hết hơi · Đang tự nổi lên!'
+          : 'Bơi · Hơi thở ' + Math.ceil(aquatic.air) + ' giây · W / ↑ nổi · S / ↓ lặn'
+        : 'Giữ S / ↓ hoặc nút Lặn để xuống nước',
+    );
     this.setText(
       'effects',
       status === 'pause' ? 'TẠM DỪNG' : total + ' cá · ' + state.buildings.length + ' công trình',
     );
+    if (this.location !== model.location && status === 'play') {
+      this.location = model.location;
+      $('chapter').hidden = false;
+      window.clearTimeout(this.regionTimer);
+      this.regionTimer = window.setTimeout(() => ($('chapter').hidden = true), 2600);
+    }
+    if (aquatic?.near && status === 'play') $('chapter').hidden = true;
+    if (model.anchor) {
+      if (this.anchorX !== model.anchor.x) {
+        this.anchorX = model.anchor.x;
+        document.documentElement.style.setProperty('--hud-context-x', model.anchor.x + '%');
+      }
+      if (this.anchorY !== model.anchor.y) {
+        this.anchorY = model.anchor.y;
+        document.documentElement.style.setProperty('--hud-context-y', model.anchor.y + '%');
+      }
+    }
+    $('context-action').classList.toggle('unavailable', model.actionLabel === 'Tương tác');
     const label = $('chapter').querySelector('span')!;
     if (label.textContent !== model.location) label.textContent = model.location;
     if (this.status !== status) {
@@ -156,62 +218,12 @@ export class GameUI {
       pause.setAttribute('aria-label', status === 'pause' ? 'Tiếp tục game' : 'Tạm dừng game');
     }
     this.setText('action-label', model.actionLabel);
+    $<HTMLButtonElement>('action').disabled = Boolean(aquatic?.active);
     $('action').classList.toggle('bite', model.bite);
     $('cancel-action').hidden = !model.cancelVisible;
   }
   renderInventory(state: Save, portrait: string) {
-    ($('camper-preview') as HTMLImageElement).src = portrait;
-    $('inventory-summary').textContent = state.wood + ' gỗ · ' + state.stone + ' đá · Cần câu & bộ dụng cụ cắm trại';
-    $('gear-list').innerHTML = (Object.keys(slots) as Slot[])
-      .map(
-        (slot) =>
-          '<section class="gear-slot"><h3>' +
-          slots[slot] +
-          '</h3><div class="gear-options">' +
-          gear
-            .filter((g) => g.slot === slot && state.owned.includes(g.id))
-            .map(
-              (g) =>
-                '<button data-gear="' +
-                g.id +
-                '" aria-pressed="' +
-                (state.equipped[slot] === g.id) +
-                '"><i class="gear-icon gear-' +
-                slot +
-                '" style="--swatch:' +
-                g.color +
-                '"></i><span>' +
-                g.name +
-                '</span><small>' +
-                (state.equipped[slot] === g.id ? 'Đang mặc' : 'Trang bị') +
-                '</small></button>',
-            )
-            .join('') +
-          '</div></section>',
-      )
-      .join('');
-    $('fish-list').innerHTML = fishSpecies
-      .map((f) => {
-        const own = state.fish[f.id];
-        return (
-          '<div class="fish-entry ' +
-          (own ? 'caught' : '') +
-          '"><span class="fish-icon" style="--fish:' +
-          f.color +
-          '"><svg class="pixel-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#px-fish"/></svg></span><div><strong>' +
-          (own ? f.name : '???') +
-          '</strong><small>' +
-          f.rarity +
-          (own ? ' · Lớn nhất ' + own.largest + ' cm' : ' · Chưa khám phá') +
-          '</small></div><b>×' +
-          state.fishBag.filter((fish) => fish.id === f.id).length +
-          '</b></div>'
-        );
-      })
-      .join('');
-    const counts = state.fishBag.length;
-    $('fish-summary').textContent =
-      counts + ' cá · ' + Object.keys(state.fish).length + '/' + fishSpecies.length + ' loài';
+    renderInventory(state, portrait, this.inventoryMenu);
   }
   renderRecipes(state: Save, images: Record<BuildingKind, string>) {
     $('build-resources').textContent = 'Bạn có ' + state.wood + ' gỗ · ' + state.stone + ' đá';
@@ -244,6 +256,7 @@ export class GameUI {
   dispose() {
     this.abort.abort();
     window.clearTimeout(this.toastTimer);
+    window.clearTimeout(this.regionTimer);
     this.closeAll();
   }
 }
